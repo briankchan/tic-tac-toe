@@ -12,7 +12,6 @@ var turnIndicatorY = boardSize/2-boardSize/boardDims/2;
 var selected;
 
 $(function() {
-	
 	canvas = new fabric.Canvas("canvas");
 	canvas.selection = false;
 	
@@ -55,8 +54,19 @@ function createBoardOutline() {
 function createXIndicator() {
 	var indicator = createX(turnIndicatorX, turnIndicatorY, boardSize/boardDims);
 	
-	indicator.evented = true; //fml
-	indicator.selectable = true;
+	indicator = new fabric.Group([indicator, new fabric.Text("move, then action", {
+		left: turnIndicatorX + boardSize/boardDims+5,
+		top: boardSize/2-15,
+		fontSize: 30,
+		fontFamily: "Arial",
+		hasControls: false,
+		lockMovementX: true,
+		lockMovementY: true,
+		lockScalingX: true,
+		lockScalingY: true,
+		lockRotation: true
+	})]);
+	
 	indicator.on("selected", function() {
 		canvas.deactivateAll();
 		turn = "O";
@@ -71,8 +81,19 @@ function createXIndicator() {
 function createOIndicator() {
 	var indicator = createO(turnIndicatorX, turnIndicatorY, boardSize/boardDims);
 	
-	indicator.evented = true; //this is terrible
-	indicator.selectable = true;
+	indicator = new fabric.Group([indicator, new fabric.Text("action, then move", {
+		left: turnIndicatorX + boardSize/boardDims+5,
+		top: boardSize/2-15,
+		fontSize: 30,
+		fontFamily: "Arial",
+		hasControls: false,
+		lockMovementX: true,
+		lockMovementY: true,
+		lockScalingX: true,
+		lockScalingY: true,
+		lockRotation: true
+	})]);
+	
 	indicator.on("selected", function() {
 		canvas.deactivateAll();
 		turn = "X";
