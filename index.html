@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Tic-Tac-Toe: the board game</title>
+	
+	<script src="jquery-2.1.4.min.js"></script>
+	<script src="fabric.min.js"></script>
+	<script src="script.js"></script>
+</head>
+<body>
+<canvas id="canvas" width="1000" height="600"></canvas>
+<div id="rules" style="font-family:Arial, sans-serif">
+	<h2>Rules</h2>
+	
+	<p>
+		<h3>Setup</h3>
+		The game is played on a 4×4 grid. The middle four pieces are initially controlled by the second player.
+	</p>
+	<p>
+		<h3>Turns</h3>
+		Each turn, a player may move a piece and take an action if possible.<br>
+		The first player must move a piece before taking an action. The second player must use an action before moving a piece.
+		This means that on the first turn, the player cannot move a piece at all.
+	</p>
+
+	<p>
+		<h3>Moving</h3>
+		A piece can be moved to any of the up-to-eight neighboring tiles.<br>
+		Whenever a player places or moves a piece, the player takes control of the tile that the piece is placed or moved onto.<br>
+		A player may not move a piece onto another piece.
+	</p>
+	
+	<p>
+		<h3>Actions</h3>
+		Actions require the player to own a certain configuration of tiles in order to be used.<br>
+		Currently, the only action is placing a new piece, which can be used if the player controls two adjacent tiles or on the first turn.<br>
+		A piece may only be placed on a neutral tile or a tile the player owns, but not on the opposing player's tiles.
+	</p>
+	
+	<p>
+		<h3>Winning</h3>
+		A player wins by having four pieces in a row horizontally, vertically, or diagonally.
+	</p>
+</div>
+</body>
+</html>
