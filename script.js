@@ -1,225 +1,232 @@
 
-var canvas;
+var PLAYERS = {
+	N: 0,
+	X: 1,
+	O: 2
+};
+
+var stage;
 
 var boardDims = 4;
-var board = [[boardDims], [boardDims], [boardDims], [boardDims]]; //TODO create dynamically based on boardDims
+var board = new Array(boardDims);
+for(var i=0; i<boardDims; i++){
+	board[i] = new Array(boardDims);
+}
 var boardSize = 500;
+//the board is actually 2px larger than boardSize in each direction.
+var boardGraphic = new createjs.Graphics().f("white").s("black").ss(1).drawRect(-1,-1,boardSize+2,boardSize+2);
+var nTileGraphic = new createjs.Graphics().f("white").s("black").drawRect(1,1,boardSize/boardDims-2,boardSize/boardDims-2);
+var xTileGraphic = new createjs.Graphics().f("lightblue").s("black").drawRect(1,1,boardSize/boardDims-2,boardSize/boardDims-2);
+var oTileGraphic = new createjs.Graphics().f("pink").s("black").drawRect(1,1,boardSize/boardDims-2,boardSize/boardDims-2);
+
+var selectGraphic = new createjs.Graphics().f("transparent").s("green").ss(5).drawRect(1,1,boardSize/boardDims-2,boardSize/boardDims-2);
+
+var emptyGraphic = new createjs.Graphics();
+var xGraphic = new createjs.Graphics().f("transparent").s("darkblue").ss(5)
+		.moveTo(boardSize/boardDims/5,boardSize/boardDims/5).lineTo(boardSize/boardDims*4/5,boardSize/boardDims*4/5)
+		.moveTo(boardSize/boardDims/5,boardSize/boardDims*4/5).lineTo(boardSize/boardDims*4/5,boardSize/boardDims/5);
+var oGraphic = new createjs.Graphics().f("transparent").s("darkred").ss(5)
+		.drawCircle(boardSize/boardDims/2,boardSize/boardDims/2,boardSize/boardDims*2/5);
+
 
 var turn = "X";
 var turnIndicatorX = boardSize*7/6;
 var turnIndicatorY = boardSize/2-boardSize/boardDims/2;
 
-var selected;
+var selectedTile;
 
 $(function() {
-	canvas = new fabric.Canvas("canvas");
-	canvas.selection = false;
+	stage = new createjs.Stage("canvas");
+	stage.x = 5;
+	stage.y = 5;
 	
-	canvas.add(createBoardOutline());
+	stage.mouseEventsEnabled = true;
 	
-	for (var i = 0; i < boardDims; i++)
-		for (var j = 0; j < boardDims; j++) {
-			var square = createBoardSquare(i, j);
-			board[i][j] = square;
-			canvas.add(square);
+	stage.addChild(new createjs.Shape(boardGraphic));
+	
+	for (var i=0; i<boardDims; i++) {
+		for (var j=0; j<boardDims; j++) {
+			board[i][j] = new Tile(i,j);
 		}
+	}
+	
+	stage.update();
 	
 	for (var i = 1; i < 3; i++) //hardcode starting condition for 4x4 because reasons
 		for (var j = 1; j < 3; j++) {
-			board[i][j].fill="pink";
+			board[i][j].setOControl();
 		}	
-	canvas.add(createXIndicator());
+	//canvas.add(createXIndicator());
 	
 });
 
-function createBoardOutline() {
-	return new fabric.Rect({
-		left: 0,
-		top: 0,
-		width: boardSize,
-		height: boardSize,
-		fill: "white",
-		stroke: "gray",
-		selectable: false,
-		evented: false,
-		hasControls: false,
-		lockMovementX: true,
-		lockMovementY: true,
-		lockScalingX: true,
-		lockScalingY: true,
-		lockRotation: true
-	});
-}
-
-function createXIndicator() {
-	var indicator = createX(turnIndicatorX, turnIndicatorY, boardSize/boardDims);
+function Tile(x, y) {
+	this.x = x;
+	this.y = y;
 	
-	indicator = new fabric.Group([indicator, new fabric.Text("move, then action", {
-		left: turnIndicatorX + boardSize/boardDims+5,
-		top: boardSize/2-15,
-		fontSize: 30,
-		fontFamily: "Arial",
-		hasControls: false,
-		lockMovementX: true,
-		lockMovementY: true,
-		lockScalingX: true,
-		lockScalingY: true,
-		lockRotation: true
-	})]);
+	this.owner = PLAYERS.N;
+	this.tileShape = new createjs.Shape(nTileGraphic);
+	this.piece = PLAYERS.N;
+	this.pieceShape = new createjs.Shape(emptyGraphic);
+	this.selected = false;
+	this.selectShape = new createjs.Shape(emptyGraphic);
 	
-	indicator.on("selected", function() {
-		canvas.deactivateAll();
-		turn = "O";
-		canvas.remove(this);
-		canvas.add(createOIndicator());
-		if(selected) selected.deselect();
-	});
+	var container = new createjs.Container();
+	container.addChild(this.tileShape, this.pieceShape, this.selectShape);
+	container.x = boardSize/boardDims*x;
+	container.y = boardSize/boardDims*y;
 	
-	return indicator;
-}
-
-function createOIndicator() {
-	var indicator = createO(turnIndicatorX, turnIndicatorY, boardSize/boardDims);
-	
-	indicator = new fabric.Group([indicator, new fabric.Text("action, then move", {
-		left: turnIndicatorX + boardSize/boardDims+5,
-		top: boardSize/2-15,
-		fontSize: 30,
-		fontFamily: "Arial",
-		hasControls: false,
-		lockMovementX: true,
-		lockMovementY: true,
-		lockScalingX: true,
-		lockScalingY: true,
-		lockRotation: true
-	})]);
-	
-	indicator.on("selected", function() {
-		canvas.deactivateAll();
-		turn = "X";
-		canvas.remove(this);
-		canvas.add(createXIndicator());
-		if(selected) selected.deselect();
-	});
-	
-	return indicator;
-}
-
-function createBoardSquare(x, y) {
-	var rect = new fabric.Rect({
-		left: boardSize*x/boardDims+1,
-		top: boardSize*y/boardDims+1,
-		width: boardSize/boardDims-2,
-		height: boardSize/boardDims-2,
-		fill: "white",
-		stroke: "gray",
-		borderColor: "green",
-		hasControls: false,
-		lockMovementX: true,
-		lockMovementY: true,
-		lockScalingX: true,
-		lockScalingY: true,
-		lockRotation: true,
-		piece: ""
-	});
-	
-	rect.on("selected", function() {
-		canvas.deactivateAll();
-		if(this.piece=="") {
-			if(selected) {
-				if (selected.piece == "X")
-					this.setX();
-				else this.setO();
-				selected.setNone();
-				selected.deselect();
+	var that = this;
+	container.addEventListener("click", function(e) {
+		if(that.piece==PLAYERS.N) {
+			if(selectedTile) {
+				if (selectedTile.piece == PLAYERS.X)
+					that.setX();
+				else that.setO();
+				selectedTile.setN();
+				selectedTile.deselect();
 			}
 			else {
-				if(turn=="X")
-					this.setX();
-				else this.setO();
+				if(turn=="X") {
+					that.setX();
+					turn = "O"
+				}
+				else {
+					that.setO();
+					turn = "X";
+				}
 			}
 		}
 		else {
-			if(selected == this)
-				this.deselect();
+			if(selectedTile == that)
+				that.deselect();
 			else {
-				if(selected) selected.deselect();
-				this.select();
+				if(selectedTile) selectedTile.deselect();
+				that.select();
 			}
 		}
 	});
 	
-	rect.select = function() {
-		selected = this;
-		this.stroke = "green";
-		this.strokeWidth = 2;
-	};
+	stage.addChild(container);
 	
-	rect.deselect = function() {
-		selected = null;
-		this.stroke = "gray";
-		this.strokeWidth = 1;
-	};
+	this.container = container;
+}
+Tile.prototype.setN = function() {
+	this.piece = PLAYERS.N;
 	
-	rect.setX = function() {
-		canvas.remove(this.pieceObj);
-		this.piece = "X";
-		this.pieceObj = createX(this.left, this.top, this.width);
-		this.fill = "lightblue";
-		canvas.add(this.pieceObj);
-	};
-	rect.setO = function() {
-		canvas.remove(this.pieceObj);
-		this.piece = "O";
-		this.pieceObj = createO(this.left, this.top, this.width);
-		this.fill = "pink";
-		canvas.add(this.pieceObj);
-	};
-	rect.setNone = function() {
-		this.piece = "";
-		canvas.remove(this.pieceObj);
-		this.pieceObj = null;
-	};
-	return rect;
-}
+	this.updateStage();
+};
+Tile.prototype.setX = function() {
+	this.piece = PLAYERS.X;
+	this.owner = PLAYERS.X;
+	
+	this.updateStage();
+};
+Tile.prototype.setO = function() {
+	this.piece = PLAYERS.O;
+	this.owner = PLAYERS.O;
+	
+	this.updateStage();
+};
+Tile.prototype.setNControl = function() {
+	this.owner = PLAYERS.N;
+	this.updateStage();
+};
+Tile.prototype.setXControl = function() {
+	this.owner = PLAYERS.X;
+	this.updateStage();
+};
+Tile.prototype.setOControl = function() {
+	this.owner = PLAYERS.O;
+	this.updateStage();
+};
+Tile.prototype.select = function() {
+	this.selected = true;
+	selectedTile = this;
+	this.updateStage();
+};
+Tile.prototype.deselect = function() {
+	this.selected = false;
+	selectedTile = null;
+	this.updateStage();
+};
+Tile.prototype.updateStage = function() {
+	if (this.piece == PLAYERS.N) {
+		this.pieceShape.graphics = emptyGraphic;
+	} else if (this.piece == PLAYERS.X) {
+		this.pieceShape.graphics = xGraphic;
+	} else if (this.piece == PLAYERS.O){
+		this.pieceShape.graphics = oGraphic;
+	}
+	
+	if (this.owner == PLAYERS.N) {
+		this.tileShape.graphics = nTileGraphic;
+	} if (this.owner == PLAYERS.X) {
+		this.tileShape.graphics = xTileGraphic;
+	} if (this.owner == PLAYERS.O) {
+		this.tileShape.graphics = oTileGraphic;
+	}
+	
+	if(this.selected) {
+		this.selectShape.graphics = selectGraphic;
+	} else this.selectShape.graphics = emptyGraphic;
+	
+	stage.update();
+};
 
-function createX(x, y, size) {
-	return new fabric.Group([
-			new fabric.Line([x + size/5, y + size*4/5, x + size*4/5, y + size/5], {
-				stroke: "darkblue",
-				strokeWidth: 5
-			}),
-			new fabric.Line([x + size/5, y + size/5, x + size*4/5, y + size*4/5], {
-				stroke: "darkblue",
-				strokeWidth: 5
-			})
-	], {
-			selectable: false,
-			evented: false,
-			hasControls: false,
-			lockMovementX: true,
-			lockMovementY: true,
-			lockScalingX: true,
-			lockScalingY: true,
-			lockRotation: true
-	});
-}
 
-function createO(x, y, size) {
-	return new fabric.Circle({
-		radius: size*3/10,
-		left: x + size/5,
-		top: y + size/5,
-		fill: "transparent",
-		stroke: "darkred",
-		strokeWidth: 5,
-		selectable: false,
-		evented: false,
-		hasControls: false,
-		lockMovementX: true,
-		lockMovementY: true,
-		lockScalingX: true,
-		lockScalingY: true,
-		lockRotation: true
-	})
-}
+
+
+//function createXIndicator() {
+//	var indicator = createX(turnIndicatorX, turnIndicatorY, boardSize/boardDims);
+//	
+//	indicator = new fabric.Group([indicator, new fabric.Text("move, then action", {
+//		left: turnIndicatorX + boardSize/boardDims+5,
+//		top: boardSize/2-15,
+//		fontSize: 30,
+//		fontFamily: "Arial",
+//		hasControls: false,
+//		lockMovementX: true,
+//		lockMovementY: true,
+//		lockScalingX: true,
+//		lockScalingY: true,
+//		lockRotation: true
+//	})]);
+//	
+//	indicator.on("selectedTile", function() {
+//		canvas.deactivateAll();
+//		turn = "O";
+//		canvas.remove(this);
+//		canvas.add(createOIndicator());
+//		if(selectedTile) selectedTile.deselect();
+//	});
+//	
+//	return indicator;
+//}
+//
+//function createOIndicator() {
+//	var indicator = createO(turnIndicatorX, turnIndicatorY, boardSize/boardDims);
+//	
+//	indicator = new fabric.Group([indicator, new fabric.Text("action, then move", {
+//		left: turnIndicatorX + boardSize/boardDims+5,
+//		top: boardSize/2-15,
+//		fontSize: 30,
+//		fontFamily: "Arial",
+//		hasControls: false,
+//		lockMovementX: true,
+//		lockMovementY: true,
+//		lockScalingX: true,
+//		lockScalingY: true,
+//		lockRotation: true
+//	})]);
+//	
+//	indicator.on("selectedTile", function() {
+//		canvas.deactivateAll();
+//		turn = "X";
+//		canvas.remove(this);
+//		canvas.add(createXIndicator());
+//		if(selectedTile) selectedTile.deselect();
+//	});
+//	
+//	return indicator;
+//}
