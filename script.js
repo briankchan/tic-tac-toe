@@ -35,7 +35,7 @@ var xGraphic = new createjs.Graphics().f("transparent").s("darkblue").ss(5)
 		.moveTo(boardSize/boardDims/5,boardSize/boardDims/5).lineTo(boardSize/boardDims*4/5,boardSize/boardDims*4/5)
 		.moveTo(boardSize/boardDims/5,boardSize/boardDims*4/5).lineTo(boardSize/boardDims*4/5,boardSize/boardDims/5);
 var oGraphic = new createjs.Graphics().f("transparent").s("darkred").ss(5)
-		.drawCircle(boardSize/boardDims/2,boardSize/boardDims/2,boardSize/boardDims*2/5);
+		.drawCircle(boardSize/boardDims/2,boardSize/boardDims/2,boardSize/boardDims*3/10);
 
 var phase;
 var turnCount;
