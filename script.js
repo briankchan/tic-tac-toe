@@ -249,6 +249,19 @@ function handleClick(tile) {
 function incrementPhase() {
 	phaseInvalid = false;
 	setErrorText("");
+	
+	var winner = checkWin();
+	if(winner != PLAYERS.N) {
+		phase = PHASES.START;
+		
+		if(winner == PLAYERS.X)
+			turnIndicator.graphics = X_GRAPHIC;
+		else turnIndicator.graphics = O_GRAPHIC;
+		turnText.text = " wins!";
+		setErrorText("Click to start a new game.");
+		return;
+	}
+	
 	phase++;
 	if(phase > PHASES.LAST) {
 		phase = PHASES.FIRST;
@@ -338,4 +351,68 @@ function playerCanUseAction(action, player) {
 }
 function doAction(action, player, tile) {
 	return action.doAction(player, tile);
+}
+
+function checkWin() {
+	for (var i=0; i<BOARD_DIMENSIONS; i++) {
+		var winner = checkWinRow(i);
+		if (winner != PLAYERS.N)
+			return winner;
+		winner = checkWinCol(i);
+		if (winner != PLAYERS.N)
+			return winner;
+	}
+	
+	var winner = checkWinDiag1();
+	if (winner != PLAYERS.N)
+		return winner;
+	winner = checkWinDiag2();
+	if (winner != PLAYERS.N)
+		return winner;
+	
+	return PLAYERS.N
+}
+function checkWinRow(n) {
+	var firstPiece = board[0][n].getPiece();
+	if(firstPiece == PLAYERS.N)
+		return PLAYERS.N;
+	else {
+		for(var i=1; i<BOARD_DIMENSIONS; i++)
+			if (board[i][n].getPiece() != firstPiece)
+				return PLAYERS.N;
+	}
+	return firstPiece;
+}
+function checkWinCol(n) {
+	var firstPiece = board[n][0].getPiece();
+	if(firstPiece == PLAYERS.N)
+		return PLAYERS.N;
+	else {
+		for(var i=1; i<BOARD_DIMENSIONS; i++)
+			if (board[n][i].getPiece() != firstPiece)
+				return PLAYERS.N;
+	}
+	return firstPiece;
+}
+function checkWinDiag1() {
+	var firstPiece = board[0][0].getPiece();
+	if(firstPiece == PLAYERS.N)
+		return PLAYERS.N;
+	else {
+		for(var i=1; i<BOARD_DIMENSIONS; i++)
+			if (board[i][i].getPiece() != firstPiece)
+				return PLAYERS.N;
+	}
+	return firstPiece;
+}
+function checkWinDiag2() {
+	var firstPiece = board[0][BOARD_DIMENSIONS-1].getPiece();
+	if(firstPiece == PLAYERS.N)
+		return PLAYERS.N;
+	else {
+		for(var i=1; i<BOARD_DIMENSIONS; i++)
+			if (board[i][BOARD_DIMENSIONS-1-i].getPiece() != firstPiece)
+				return PLAYERS.N;
+	}
+	return firstPiece;
 }
