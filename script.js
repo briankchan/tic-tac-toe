@@ -13,35 +13,65 @@ var PHASES = {
 	FIRST: 1,
 	LAST: 4
 };
+var ACTIONS = {
+	PLACE: {
+		checkCondition: function(player) {
+			for(var i= 0; i<BOARD_DIMENSIONS; i++) {
+				for(var j=0; j<BOARD_DIMENSIONS; j++) {
+					var tile = board[i][j];
+					if(tile.getController() == player) {
+						if(i<BOARD_DIMENSIONS-1 && board[i+1][j].getController() == player)
+							return true;
+						if(j<BOARD_DIMENSIONS-1 && board[i][j+1].getController() == player)
+							return true;
+					}
+					
+				}
+			}
+			return false;
+		},
+		doAction: function(player, tile) {
+			if((tile.getController() == player || tile.getController() == PLAYERS.N) && tile.getPiece() == PLAYERS.N){
+				tile.set(player);
+				return true;
+			}
+		}
+	}
+};
+
+var BOARD_SIZE = 500; //px
+var BOARD_DIMENSIONS = 4;
+var TILE_SIZE = BOARD_SIZE / BOARD_DIMENSIONS;
+
+var BOARD_GRAPHIC = new createjs.Graphics().f("white").s("black").ss(1).drawRect(-1,-1,BOARD_SIZE+2,BOARD_SIZE+2);
+
+var N_CONTROLLED_GRAPHIC = new createjs.Graphics().f("white").s("black").drawRect(1,1,TILE_SIZE-2,TILE_SIZE-2);
+var X_CONTROLLED_GRAPHIC = new createjs.Graphics().f("lightblue").s("black").drawRect(1,1,TILE_SIZE-2,TILE_SIZE-2);
+var O_CONTROLLED_GRAPHIC = new createjs.Graphics().f("pink").s("black").drawRect(1,1,TILE_SIZE-2,TILE_SIZE-2);
+
+var SELECT_GRAPHIC = new createjs.Graphics().f("transparent").s("green").ss(5).drawRect(1,1,TILE_SIZE-2,TILE_SIZE-2);
+
+var EMPTY_GRAPHIC = new createjs.Graphics();
+
+var X_GRAPHIC = new createjs.Graphics().f("transparent").s("darkblue").ss(5)
+		.moveTo(TILE_SIZE/5,TILE_SIZE/5).lineTo(TILE_SIZE*4/5,TILE_SIZE*4/5)
+		.moveTo(TILE_SIZE/5,TILE_SIZE*4/5).lineTo(TILE_SIZE*4/5,TILE_SIZE/5);
+var O_GRAPHIC = new createjs.Graphics().f("transparent").s("darkred").ss(5)
+		.drawCircle(TILE_SIZE/2,TILE_SIZE/2,TILE_SIZE*3/10);
 
 var stage;
 
-var boardDims = 4;
-var board = new Array(boardDims);
-for(var i=0; i<boardDims; i++){
-	board[i] = new Array(boardDims);
+var board = new Array(BOARD_DIMENSIONS);
+for(var i=0; i<BOARD_DIMENSIONS; i++){
+	board[i] = new Array(BOARD_DIMENSIONS);
 }
-var boardSize = 500;
-//the board is actually 2px larger than boardSize in each direction.
-var boardGraphic = new createjs.Graphics().f("white").s("black").ss(1).drawRect(-1,-1,boardSize+2,boardSize+2);
-var nTileGraphic = new createjs.Graphics().f("white").s("black").drawRect(1,1,boardSize/boardDims-2,boardSize/boardDims-2);
-var xTileGraphic = new createjs.Graphics().f("lightblue").s("black").drawRect(1,1,boardSize/boardDims-2,boardSize/boardDims-2);
-var oTileGraphic = new createjs.Graphics().f("pink").s("black").drawRect(1,1,boardSize/boardDims-2,boardSize/boardDims-2);
-
-var selectGraphic = new createjs.Graphics().f("transparent").s("green").ss(5).drawRect(1,1,boardSize/boardDims-2,boardSize/boardDims-2);
-
-var emptyGraphic = new createjs.Graphics();
-var xGraphic = new createjs.Graphics().f("transparent").s("darkblue").ss(5)
-		.moveTo(boardSize/boardDims/5,boardSize/boardDims/5).lineTo(boardSize/boardDims*4/5,boardSize/boardDims*4/5)
-		.moveTo(boardSize/boardDims/5,boardSize/boardDims*4/5).lineTo(boardSize/boardDims*4/5,boardSize/boardDims/5);
-var oGraphic = new createjs.Graphics().f("transparent").s("darkred").ss(5)
-		.drawCircle(boardSize/boardDims/2,boardSize/boardDims/2,boardSize/boardDims*3/10);
+//the board is actually 2px larger than BOARD_SIZE in each direction.
 
 var phase;
 var turnCount;
 
 var turnIndicator;
-var turnText
+var turnText;
 
 var selectedTile;
 
@@ -52,10 +82,10 @@ $(function() {
 	
 	stage.mouseEventsEnabled = true;
 	
-	stage.addChild(new createjs.Shape(boardGraphic));
+	stage.addChild(new createjs.Shape(BOARD_GRAPHIC));
 	
-	for (var i=0; i<boardDims; i++) {
-		for (var j=0; j<boardDims; j++) {
+	for (var i=0; i<BOARD_DIMENSIONS; i++) {
+		for (var j=0; j<BOARD_DIMENSIONS; j++) {
 			board[i][j] = new Tile(i,j);
 		}
 	}
@@ -70,16 +100,16 @@ $(function() {
 	phase = PHASES.X_MOVE;
 	turnCount = 0;
 	
-	turnIndicator = new createjs.Shape(xGraphic);
+	turnIndicator = new createjs.Shape(X_GRAPHIC);
 	turnText = new createjs.Text("move","32px Arial", "black");
-	turnText.x = boardSize/boardDims+8;
-	turnText.y = boardSize/boardDims/2-16;
+	turnText.x = BOARD_SIZE/BOARD_DIMENSIONS+8;
+	turnText.y = BOARD_SIZE/BOARD_DIMENSIONS/2-16;
 	
 	var container = new createjs.Container();
 	container.addChild(turnIndicator, turnText);
 	
-	container.x = boardSize*7/6;
-	container.y = boardSize/boardDims;
+	container.x = BOARD_SIZE*7/6;
+	container.y = BOARD_SIZE/BOARD_DIMENSIONS;
 	stage.addChild(container);
 	
 	stage.update();
@@ -90,20 +120,20 @@ function Tile(x, y) {
 	this.y = y;
 	
 	this.owner = PLAYERS.N;
-	this.tileShape = new createjs.Shape(nTileGraphic);
+	this.tileShape = new createjs.Shape(N_CONTROLLED_GRAPHIC);
 	this.piece = PLAYERS.N;
-	this.pieceShape = new createjs.Shape(emptyGraphic);
+	this.pieceShape = new createjs.Shape(EMPTY_GRAPHIC);
 	this.selected = false;
-	this.selectShape = new createjs.Shape(emptyGraphic);
+	this.selectShape = new createjs.Shape(EMPTY_GRAPHIC);
 	
 	var container = new createjs.Container();
 	container.addChild(this.tileShape, this.pieceShape, this.selectShape);
-	container.x = boardSize/boardDims*x;
-	container.y = boardSize/boardDims*y;
+	container.x = BOARD_SIZE/BOARD_DIMENSIONS*x;
+	container.y = BOARD_SIZE/BOARD_DIMENSIONS*y;
 	
 	var that = this;
 	container.addEventListener("click", function(e) {
-		handleClick(that.x, that.y, that);
+		handleClick(that);
 	});
 	
 	stage.addChild(container);
@@ -146,24 +176,24 @@ Tile.prototype.deselect = function() {
 };
 Tile.prototype.updateStage = function() {
 	if (this.piece == PLAYERS.N) {
-		this.pieceShape.graphics = emptyGraphic;
+		this.pieceShape.graphics = EMPTY_GRAPHIC;
 	} else if (this.piece == PLAYERS.X) {
-		this.pieceShape.graphics = xGraphic;
+		this.pieceShape.graphics = X_GRAPHIC;
 	} else if (this.piece == PLAYERS.O){
-		this.pieceShape.graphics = oGraphic;
+		this.pieceShape.graphics = O_GRAPHIC;
 	}
 	
 	if (this.owner == PLAYERS.N) {
-		this.tileShape.graphics = nTileGraphic;
+		this.tileShape.graphics = N_CONTROLLED_GRAPHIC;
 	} if (this.owner == PLAYERS.X) {
-		this.tileShape.graphics = xTileGraphic;
+		this.tileShape.graphics = X_CONTROLLED_GRAPHIC;
 	} if (this.owner == PLAYERS.O) {
-		this.tileShape.graphics = oTileGraphic;
+		this.tileShape.graphics = O_CONTROLLED_GRAPHIC;
 	}
 	
 	if(this.selected) {
-		this.selectShape.graphics = selectGraphic;
-	} else this.selectShape.graphics = emptyGraphic;
+		this.selectShape.graphics = SELECT_GRAPHIC;
+	} else this.selectShape.graphics = EMPTY_GRAPHIC;
 	
 	stage.update();
 };
@@ -171,11 +201,10 @@ Tile.prototype.isNeighbor = function(tile) {
 	return Math.abs(this.x - tile.x)<=1 && Math.abs(this.y - tile.y)<=1 
 };
 
-function handleClick(x, y, tile) {
-	console.log("phase", phase);
+function handleClick(tile) {
 	if(phase == PHASES.START) {
-		for (var i = 0; i < boardDims; i++) //hardcode starting condition for 4x4 because reasons
-			for (var j = 0; j < boardDims; j++) {
+		for (var i = 0; i < BOARD_DIMENSIONS; i++) //hardcode starting condition for 4x4 because reasons
+			for (var j = 0; j < BOARD_DIMENSIONS; j++) {
 				board[i][j].set(PLAYERS.N);
 				if(i>=1 && i<=2 && j>=1 && j<=2)
 					board[i][j].setOControl();
@@ -212,16 +241,16 @@ function incrementPhase() {
 	}
 	
 	if(phase == PHASES.X_MOVE) {
-		turnIndicator.graphics = xGraphic;
+		turnIndicator.graphics = X_GRAPHIC;
 		turnText.text = "move";
 	} else if (phase == PHASES.X_ACTION) {
-		turnIndicator.graphics = xGraphic;
+		turnIndicator.graphics = X_GRAPHIC;
 		turnText.text = "place";
 	} else if (phase == PHASES.O_ACTION) {
-		turnIndicator.graphics = oGraphic;
+		turnIndicator.graphics = O_GRAPHIC;
 		turnText.text = "place";
 	} else if (phase == PHASES.O_MOVE) {
-		turnIndicator.graphics = oGraphic;
+		turnIndicator.graphics = O_GRAPHIC;
 		turnText.text = "move";
 	}
 	stage.update();
@@ -248,10 +277,9 @@ function movePiece(player, tile) {
 }
 
 function boardHasPiece(player) {
-	for (var i = 0; i < boardDims; i++)
-		for (var j = 0; j < boardDims; j++) {
+	for (var i = 0; i < BOARD_DIMENSIONS; i++)
+		for (var j = 0; j < BOARD_DIMENSIONS; j++) {
 			if (board[i][j].getPiece() == player){
-				console.log(true);
 				return true;
 			}
 		}
@@ -265,85 +293,3 @@ function playerCanUseAction(action, player) {
 function doAction(action, player, tile) {
 	return action.doAction(player, tile);
 }
-
-var ACTIONS = {
-	PLACE: {
-		checkCondition: function(player) {
-			for(var i= 0; i<boardDims; i++) {
-				for(var j=0; j<boardDims; j++) {
-					var tile = board[i][j];
-					if(tile.getController() == player) {
-						if(i<boardDims-1 && board[i+1][j].getController() == player)
-							return true;
-						if(j<boardDims-1 && board[i][j+1].getController() == player)
-							return true;
-					} else console.log(i,j,tile.getController())
-					
-				}
-			}
-			console.log("nope");
-			return false;
-		},
-		doAction: function(player, tile) {
-			if((tile.getController() == player || tile.getController() == PLAYERS.N) && tile.getPiece() == PLAYERS.N){
-				tile.set(player);
-				return true;
-			}
-		}
-	}
-};
-
-
-//function createXIndicator() {
-//	var indicator = createX(turnIndicatorX, turnIndicatorY, boardSize/boardDims);
-//	
-//	indicator = new fabric.Group([indicator, new fabric.Text("move, then action", {
-//		left: turnIndicatorX + boardSize/boardDims+5,
-//		top: boardSize/2-15,
-//		fontSize: 30,
-//		fontFamily: "Arial",
-//		hasControls: false,
-//		lockMovementX: true,
-//		lockMovementY: true,
-//		lockScalingX: true,
-//		lockScalingY: true,
-//		lockRotation: true
-//	})]);
-//	
-//	indicator.on("selectedTile", function() {
-//		canvas.deactivateAll();
-//		turn = "O";
-//		canvas.remove(this);
-//		canvas.add(createOIndicator());
-//		if(selectedTile) selectedTile.deselect();
-//	});
-//	
-//	return indicator;
-//}
-//
-//function createOIndicator() {
-//	var indicator = createO(turnIndicatorX, turnIndicatorY, boardSize/boardDims);
-//	
-//	indicator = new fabric.Group([indicator, new fabric.Text("action, then move", {
-//		left: turnIndicatorX + boardSize/boardDims+5,
-//		top: boardSize/2-15,
-//		fontSize: 30,
-//		fontFamily: "Arial",
-//		hasControls: false,
-//		lockMovementX: true,
-//		lockMovementY: true,
-//		lockScalingX: true,
-//		lockScalingY: true,
-//		lockRotation: true
-//	})]);
-//	
-//	indicator.on("selectedTile", function() {
-//		canvas.deactivateAll();
-//		turn = "X";
-//		canvas.remove(this);
-//		canvas.add(createXIndicator());
-//		if(selectedTile) selectedTile.deselect();
-//	});
-//	
-//	return indicator;
-//}
