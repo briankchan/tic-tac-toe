@@ -40,8 +40,8 @@ var oGraphic = new createjs.Graphics().f("transparent").s("darkred").ss(5)
 var phase;
 var turnCount;
 
-var turnIndicatorX = boardSize*7/6;
-var turnIndicatorY = boardSize/2-boardSize/boardDims/2;
+var turnIndicator;
+var turnText
 
 var selectedTile;
 
@@ -60,7 +60,6 @@ $(function() {
 		}
 	}
 	
-	stage.update();
 	
 	for (var i = 1; i < 3; i++) //hardcode starting condition for 4x4 because reasons
 		for (var j = 1; j < 3; j++) {
@@ -71,6 +70,19 @@ $(function() {
 	phase = PHASES.X_MOVE;
 	turnCount = 0;
 	
+	turnIndicator = new createjs.Shape(xGraphic);
+	turnText = new createjs.Text("move","32px Arial", "black");
+	turnText.x = boardSize/boardDims+8;
+	turnText.y = boardSize/boardDims/2-16;
+	
+	var container = new createjs.Container();
+	container.addChild(turnIndicator, turnText);
+	
+	container.x = boardSize*7/6;
+	container.y = boardSize/boardDims;
+	stage.addChild(container);
+	
+	stage.update();
 });
 
 function Tile(x, y) {
@@ -200,6 +212,21 @@ function incrementPhase() {
 		phase = PHASES.FIRST;
 		turnCount++;
 	}
+	
+	if(phase == PHASES.X_MOVE) {
+		turnIndicator.graphics = xGraphic;
+		turnText.text = "move";
+	} else if (phase == PHASES.X_ACTION) {
+		turnIndicator.graphics = xGraphic;
+		turnText.text = "place";
+	} else if (phase == PHASES.O_ACTION) {
+		turnIndicator.graphics = oGraphic;
+		turnText.text = "place";
+	} else if (phase == PHASES.O_MOVE) {
+		turnIndicator.graphics = oGraphic;
+		turnText.text = "move";
+	}
+	stage.update();
 }
 
 function movePiece(player, tile) {
