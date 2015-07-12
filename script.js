@@ -107,8 +107,6 @@ function Tile(x, y) {
 	});
 	
 	stage.addChild(container);
-	
-	this.container = container;
 }
 Tile.prototype.set = function(player) {
 	this.piece = player;
