@@ -4,6 +4,15 @@ var PLAYERS = {
 	X: 1,
 	O: 2
 };
+var PHASES = {
+	START: 0,
+	X_MOVE: 1,
+	X_ACTION: 2,
+	O_ACTION: 3,
+	O_MOVE: 4,
+	FIRST: 1,
+	LAST: 4
+};
 
 var stage;
 
@@ -28,8 +37,9 @@ var xGraphic = new createjs.Graphics().f("transparent").s("darkblue").ss(5)
 var oGraphic = new createjs.Graphics().f("transparent").s("darkred").ss(5)
 		.drawCircle(boardSize/boardDims/2,boardSize/boardDims/2,boardSize/boardDims*2/5);
 
+var phase;
+var turnCount;
 
-var turn = "X";
 var turnIndicatorX = boardSize*7/6;
 var turnIndicatorY = boardSize/2-boardSize/boardDims/2;
 
@@ -55,8 +65,11 @@ $(function() {
 	for (var i = 1; i < 3; i++) //hardcode starting condition for 4x4 because reasons
 		for (var j = 1; j < 3; j++) {
 			board[i][j].setOControl();
-		}	
+		}
 	//canvas.add(createXIndicator());
+	
+	phase = PHASES.X_MOVE;
+	turnCount = 0;
 	
 });
 
@@ -78,55 +91,23 @@ function Tile(x, y) {
 	
 	var that = this;
 	container.addEventListener("click", function(e) {
-		if(that.piece==PLAYERS.N) {
-			if(selectedTile) {
-				if (selectedTile.piece == PLAYERS.X)
-					that.setX();
-				else that.setO();
-				selectedTile.setN();
-				selectedTile.deselect();
-			}
-			else {
-				if(turn=="X") {
-					that.setX();
-					turn = "O"
-				}
-				else {
-					that.setO();
-					turn = "X";
-				}
-			}
-		}
-		else {
-			if(selectedTile == that)
-				that.deselect();
-			else {
-				if(selectedTile) selectedTile.deselect();
-				that.select();
-			}
-		}
+		handleClick(that.x, that.y, that);
 	});
 	
 	stage.addChild(container);
 	
 	this.container = container;
 }
-Tile.prototype.setN = function() {
-	this.piece = PLAYERS.N;
+Tile.prototype.set = function(player) {
+	this.piece = player;
+	if(player != PLAYERS.N) {
+		this.owner = player;
+	}
 	
 	this.updateStage();
 };
-Tile.prototype.setX = function() {
-	this.piece = PLAYERS.X;
-	this.owner = PLAYERS.X;
-	
-	this.updateStage();
-};
-Tile.prototype.setO = function() {
-	this.piece = PLAYERS.O;
-	this.owner = PLAYERS.O;
-	
-	this.updateStage();
+Tile.prototype.getPiece = function() {
+	return this.piece;
 };
 Tile.prototype.setNControl = function() {
 	this.owner = PLAYERS.N;
@@ -139,6 +120,9 @@ Tile.prototype.setXControl = function() {
 Tile.prototype.setOControl = function() {
 	this.owner = PLAYERS.O;
 	this.updateStage();
+};
+Tile.prototype.getController = function() {
+	return this.owner;
 };
 Tile.prototype.select = function() {
 	this.selected = true;
@@ -173,8 +157,116 @@ Tile.prototype.updateStage = function() {
 	
 	stage.update();
 };
+Tile.prototype.isNeighbor = function(tile) {
+	return Math.abs(this.x - tile.x)<=1 && Math.abs(this.y - tile.y)<=1 
+};
 
+function handleClick(x, y, tile) {
+	console.log("phase", phase);
+	if(phase == PHASES.START) {
+		for (var i = 0; i < boardDims; i++) //hardcode starting condition for 4x4 because reasons
+			for (var j = 0; j < boardDims; j++) {
+				board[i][j].set(PLAYERS.N);
+				if(i>=1 && i<=2 && j>=1 && j<=2)
+					board[i][j].setOControl();
+				else board[i][j].setNControl();
+			}
+		
+		turnCount = 0;
+		
+		incrementPhase();
+	} else if (phase == PHASES.X_MOVE) {
+		if(movePiece(PLAYERS.X, tile))
+			incrementPhase();
+	} else if (phase == PHASES.X_ACTION) {
+		if (turnCount==0 || playerCanUseAction(ACTIONS.PLACE, PLAYERS.X)) {
+			if (doAction(ACTIONS.PLACE, PLAYERS.X, tile))
+				incrementPhase();
+		} else incrementPhase();
+	} else if (phase == PHASES.O_ACTION) {
+		if (playerCanUseAction(ACTIONS.PLACE, PLAYERS.O)) {
+			if (doAction(ACTIONS.PLACE, PLAYERS.O, tile))
+				incrementPhase();
+		} else incrementPhase();
+	} else if (phase == PHASES.O_MOVE) {
+		if(movePiece(PLAYERS.O, tile))
+			incrementPhase();
+	}
+}
 
+function incrementPhase() {
+	phase++;
+	if(phase > PHASES.LAST) {
+		phase = PHASES.FIRST;
+		turnCount++;
+	}
+}
+
+function movePiece(player, tile) {
+	if(boardHasPiece(player)) {
+		if(selectedTile == null) {
+			if(tile.getPiece() == player)
+				tile.select();
+		} else if (tile==selectedTile) {
+			tile.deselect();
+		} else if (tile.getPiece() == PLAYERS.N && tile.isNeighbor(selectedTile))  {
+			selectedTile.set(PLAYERS.N);
+			selectedTile.deselect();
+			tile.set(player);
+			return true;
+		}
+	} else {
+		return true;
+	}
+	
+	return false;
+}
+
+function boardHasPiece(player) {
+	for (var i = 0; i < boardDims; i++)
+		for (var j = 0; j < boardDims; j++) {
+			if (board[i][j].getPiece() == player){
+				console.log(true);
+				return true;
+			}
+		}
+	
+	return false;
+}
+
+function playerCanUseAction(action, player) {
+	return action.checkCondition(player);
+}
+function doAction(action, player, tile) {
+	return action.doAction(player, tile);
+}
+
+var ACTIONS = {
+	PLACE: {
+		checkCondition: function(player) {
+			for(var i= 0; i<boardDims; i++) {
+				for(var j=0; j<boardDims; j++) {
+					var tile = board[i][j];
+					if(tile.getController() == player) {
+						if(i<boardDims-1 && board[i+1][j].getController() == player)
+							return true;
+						if(j<boardDims-1 && board[i][j+1].getController() == player)
+							return true;
+					} else console.log(i,j,tile.getController())
+					
+				}
+			}
+			console.log("nope");
+			return false;
+		},
+		doAction: function(player, tile) {
+			if((tile.getController() == player || tile.getController() == PLAYERS.N) && tile.getPiece() == PLAYERS.N){
+				tile.set(player);
+				return true;
+			}
+		}
+	}
+};
 
 
 //function createXIndicator() {
