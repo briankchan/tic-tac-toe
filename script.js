@@ -31,10 +31,14 @@ var ACTIONS = {
 			return false;
 		},
 		doAction: function(player, tile) {
-			if((tile.getController() == player || tile.getController() == PLAYERS.N) && tile.getPiece() == PLAYERS.N){
-				tile.set(player);
-				return true;
-			}
+			if((tile.getController() == player || tile.getController() == PLAYERS.N)) {
+				if (tile.getPiece() == PLAYERS.N) {
+					tile.set(player);
+					setErrorText("");
+					return true;
+				} else setErrorText("Not an empty tile.");
+			} else setErrorText("Not a neutral tile or a tile you control.");
+			return false;
 		}
 	}
 };
@@ -68,10 +72,12 @@ for(var i=0; i<BOARD_DIMENSIONS; i++){
 //the board is actually 2px larger than BOARD_SIZE in each direction.
 
 var phase;
+var phaseInvalid;
 var turnCount;
 
 var turnIndicator;
 var turnText;
+var errorText;
 
 var selectedTile;
 
@@ -97,20 +103,29 @@ $(function() {
 		}
 	//canvas.add(createXIndicator());
 	
-	phase = PHASES.X_MOVE;
+	phase = PHASES.START;
 	turnCount = 0;
 	
-	turnIndicator = new createjs.Shape(X_GRAPHIC);
-	turnText = new createjs.Text("move","32px Arial", "black");
-	turnText.x = BOARD_SIZE/BOARD_DIMENSIONS+8;
-	turnText.y = BOARD_SIZE/BOARD_DIMENSIONS/2-16;
+	turnIndicator = new createjs.Shape();
+	turnText = new createjs.Text("","32px Arial", "black");
+	turnText.x = TILE_SIZE*9/10;
+	turnText.y = TILE_SIZE/2-16;
 	
 	var container = new createjs.Container();
 	container.addChild(turnIndicator, turnText);
 	
 	container.x = BOARD_SIZE*7/6;
-	container.y = BOARD_SIZE/BOARD_DIMENSIONS;
-	stage.addChild(container);
+	container.y = TILE_SIZE;
+	
+	errorText = new createjs.Text("","24px Arial", "black");
+	errorText.x = BOARD_SIZE*7/6 + TILE_SIZE*1/5;
+	errorText.y = TILE_SIZE*5/2-12;
+	errorText.lineHeight = 30;
+	errorText.lineWidth = 350;
+	
+	incrementPhase();
+	
+	stage.addChild(container, errorText);
 	
 	stage.update();
 });
@@ -202,7 +217,9 @@ Tile.prototype.isNeighbor = function(tile) {
 };
 
 function handleClick(tile) {
-	if(phase == PHASES.START) {
+	if (phaseInvalid) {
+		incrementPhase();
+	} else if(phase == PHASES.START) {
 		for (var i = 0; i < BOARD_DIMENSIONS; i++) //hardcode starting condition for 4x4 because reasons
 			for (var j = 0; j < BOARD_DIMENSIONS; j++) {
 				board[i][j].set(PLAYERS.N);
@@ -218,15 +235,11 @@ function handleClick(tile) {
 		if(movePiece(PLAYERS.X, tile))
 			incrementPhase();
 	} else if (phase == PHASES.X_ACTION) {
-		if (turnCount==0 || playerCanUseAction(ACTIONS.PLACE, PLAYERS.X)) {
-			if (doAction(ACTIONS.PLACE, PLAYERS.X, tile))
-				incrementPhase();
-		} else incrementPhase();
+		if (doAction(ACTIONS.PLACE, PLAYERS.X, tile))
+			incrementPhase();
 	} else if (phase == PHASES.O_ACTION) {
-		if (playerCanUseAction(ACTIONS.PLACE, PLAYERS.O)) {
-			if (doAction(ACTIONS.PLACE, PLAYERS.O, tile))
-				incrementPhase();
-		} else incrementPhase();
+		if (doAction(ACTIONS.PLACE, PLAYERS.O, tile))
+			incrementPhase();
 	} else if (phase == PHASES.O_MOVE) {
 		if(movePiece(PLAYERS.O, tile))
 			incrementPhase();
@@ -234,6 +247,8 @@ function handleClick(tile) {
 }
 
 function incrementPhase() {
+	phaseInvalid = false;
+	setErrorText("");
 	phase++;
 	if(phase > PHASES.LAST) {
 		phase = PHASES.FIRST;
@@ -242,35 +257,66 @@ function incrementPhase() {
 	
 	if(phase == PHASES.X_MOVE) {
 		turnIndicator.graphics = X_GRAPHIC;
-		turnText.text = "move";
+		turnText.text = "'s move";
+		
+		if(!boardHasPiece(PLAYERS.X)) {
+			phaseInvalid = true;
+			setErrorText("No pieces; click board to continue.");
+		}
 	} else if (phase == PHASES.X_ACTION) {
 		turnIndicator.graphics = X_GRAPHIC;
-		turnText.text = "place";
+		turnText.text = "'s action";
+		
+		if(turnCount>0 && !playerCanUseAction(ACTIONS.PLACE, PLAYERS.X)) {
+			phaseInvalid = true;
+			setErrorText("No valid action; click board to continue.");
+		}
 	} else if (phase == PHASES.O_ACTION) {
 		turnIndicator.graphics = O_GRAPHIC;
-		turnText.text = "place";
+		turnText.text = "'s action";
+		
+		if(!playerCanUseAction(ACTIONS.PLACE, PLAYERS.O)) {
+			phaseInvalid = true;
+			setErrorText("No valid action; click board to continue.");
+		}
 	} else if (phase == PHASES.O_MOVE) {
 		turnIndicator.graphics = O_GRAPHIC;
-		turnText.text = "move";
+		turnText.text = "'s move";
+		
+		if(!boardHasPiece(PLAYERS.O)) {
+			phaseInvalid = true;
+			setErrorText("No pieces; click board to continue.");
+		}
 	}
 	stage.update();
 }
 
+function setErrorText(text) {
+	errorText.text = text;
+	stage.update();
+}
+
 function movePiece(player, tile) {
-	if(boardHasPiece(player)) {
-		if(selectedTile == null) {
-			if(tile.getPiece() == player)
-				tile.select();
-		} else if (tile==selectedTile) {
-			tile.deselect();
-		} else if (tile.getPiece() == PLAYERS.N && tile.isNeighbor(selectedTile))  {
+	if(selectedTile == null) {
+		if(tile.getPiece() == player){
+			tile.select();
+			setErrorText("");
+		} else setErrorText("Not a piece you can move.")
+	} else if (tile==selectedTile) {
+		tile.deselect();
+		setErrorText("");
+	}else if(tile.isNeighbor(selectedTile)) {
+		if (tile.getPiece() == PLAYERS.N) {
 			selectedTile.set(PLAYERS.N);
 			selectedTile.deselect();
 			tile.set(player);
+			setErrorText("");
 			return true;
+		} else {
+			setErrorText("Not an empty tile.");
 		}
 	} else {
-		return true;
+		setErrorText("Not a neighboring tile.");
 	}
 	
 	return false;
