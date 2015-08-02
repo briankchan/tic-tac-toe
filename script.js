@@ -15,7 +15,7 @@ var PHASES = {
 };
 var ACTIONS = {
 	PLACE: {
-		checkCondition: function(player) {
+		checkCondition: function(board, player) {
 			for(var i= 0; i<BOARD_DIMENSIONS; i++) {
 				for(var j=0; j<BOARD_DIMENSIONS; j++) {
 					var tile = board[i][j];
@@ -30,7 +30,7 @@ var ACTIONS = {
 			}
 			return false;
 		},
-		doAction: function(player, tile) {
+		doAction: function(board, player, tile) {
 			if((tile.getController() == player || tile.getController() == PLAYERS.N)) {
 				if (tile.getPiece() == PLAYERS.N) {
 					tile.set(player);
@@ -219,14 +219,8 @@ Tile.prototype.isNeighbor = function(tile) {
 function handleClick(tile) {
 	if (phaseInvalid) {
 		incrementPhase();
-	} else if(phase == PHASES.START) {
-		for (var i = 0; i < BOARD_DIMENSIONS; i++) //hardcode starting condition for 4x4 because reasons
-			for (var j = 0; j < BOARD_DIMENSIONS; j++) {
-				board[i][j].set(PLAYERS.N);
-				if(i>=1 && i<=2 && j>=1 && j<=2)
-					board[i][j].setOControl();
-				else board[i][j].setNControl();
-			}
+	} else if(phase == PHASES.START) { //reset board
+		resetBoard(board);
 		
 		turnCount = 0;
 		
@@ -235,10 +229,10 @@ function handleClick(tile) {
 		if(movePiece(PLAYERS.X, tile))
 			incrementPhase();
 	} else if (phase == PHASES.X_ACTION) {
-		if (doAction(ACTIONS.PLACE, PLAYERS.X, tile))
+		if (doAction(board, ACTIONS.PLACE, PLAYERS.X, tile))
 			incrementPhase();
 	} else if (phase == PHASES.O_ACTION) {
-		if (doAction(ACTIONS.PLACE, PLAYERS.O, tile))
+		if (doAction(board, ACTIONS.PLACE, PLAYERS.O, tile))
 			incrementPhase();
 	} else if (phase == PHASES.O_MOVE) {
 		if(movePiece(PLAYERS.O, tile))
@@ -246,11 +240,21 @@ function handleClick(tile) {
 	}
 }
 
+function resetBoard(board) {
+	for (var i = 0; i < BOARD_DIMENSIONS; i++)
+		for (var j = 0; j < BOARD_DIMENSIONS; j++) {
+			board[i][j].set(PLAYERS.N);
+			if(i>=1 && i<=2 && j>=1 && j<=2)//hardcode starting condition for 4x4 because reasons
+				board[i][j].setOControl();
+			else board[i][j].setNControl();
+		}
+}
+
 function incrementPhase() {
 	phaseInvalid = false;
 	setErrorText("");
 	
-	var winner = checkWin();
+	var winner = checkWin(board);
 	if(winner != PLAYERS.N) {
 		phase = PHASES.START;
 		
@@ -272,7 +276,7 @@ function incrementPhase() {
 		turnIndicator.graphics = X_GRAPHIC;
 		turnText.text = "'s move";
 		
-		if(!boardHasPiece(PLAYERS.X)) {
+		if(!boardHasPiece(board, PLAYERS.X)) {
 			phaseInvalid = true;
 			setErrorText("No pieces; click board to continue.");
 		}
@@ -280,7 +284,7 @@ function incrementPhase() {
 		turnIndicator.graphics = X_GRAPHIC;
 		turnText.text = "'s action";
 		
-		if(turnCount>0 && !playerCanUseAction(ACTIONS.PLACE, PLAYERS.X)) {
+		if(turnCount>0 && !playerCanUseAction(board, ACTIONS.PLACE, PLAYERS.X)) {
 			phaseInvalid = true;
 			setErrorText("No valid action; click board to continue.");
 		}
@@ -288,7 +292,7 @@ function incrementPhase() {
 		turnIndicator.graphics = O_GRAPHIC;
 		turnText.text = "'s action";
 		
-		if(!playerCanUseAction(ACTIONS.PLACE, PLAYERS.O)) {
+		if(!playerCanUseAction(board, ACTIONS.PLACE, PLAYERS.O)) {
 			phaseInvalid = true;
 			setErrorText("No valid action; click board to continue.");
 		}
@@ -296,7 +300,7 @@ function incrementPhase() {
 		turnIndicator.graphics = O_GRAPHIC;
 		turnText.text = "'s move";
 		
-		if(!boardHasPiece(PLAYERS.O)) {
+		if(!boardHasPiece(board, PLAYERS.O)) {
 			phaseInvalid = true;
 			setErrorText("No pieces; click board to continue.");
 		}
@@ -335,7 +339,7 @@ function movePiece(player, tile) {
 	return false;
 }
 
-function boardHasPiece(player) {
+function boardHasPiece(board, player) {
 	for (var i = 0; i < BOARD_DIMENSIONS; i++)
 		for (var j = 0; j < BOARD_DIMENSIONS; j++) {
 			if (board[i][j].getPiece() == player){
@@ -346,33 +350,33 @@ function boardHasPiece(player) {
 	return false;
 }
 
-function playerCanUseAction(action, player) {
-	return action.checkCondition(player);
+function playerCanUseAction(board, action, player) {
+	return action.checkCondition(board, player);
 }
-function doAction(action, player, tile) {
-	return action.doAction(player, tile);
+function doAction(board, action, player, tile) {
+	return action.doAction(board, player, tile);
 }
 
-function checkWin() {
+function checkWin(board) {
 	for (var i=0; i<BOARD_DIMENSIONS; i++) {
-		var winner = checkWinRow(i);
+		var winner = checkWinRow(board, i);
 		if (winner != PLAYERS.N)
 			return winner;
-		winner = checkWinCol(i);
+		winner = checkWinCol(board, i);
 		if (winner != PLAYERS.N)
 			return winner;
 	}
 	
-	var winner = checkWinDiag1();
+	var winner = checkWinDiag1(board);
 	if (winner != PLAYERS.N)
 		return winner;
-	winner = checkWinDiag2();
+	winner = checkWinDiag2(board);
 	if (winner != PLAYERS.N)
 		return winner;
 	
 	return PLAYERS.N
 }
-function checkWinRow(n) {
+function checkWinRow(board, n) {
 	var firstPiece = board[0][n].getPiece();
 	if(firstPiece == PLAYERS.N)
 		return PLAYERS.N;
@@ -383,7 +387,7 @@ function checkWinRow(n) {
 	}
 	return firstPiece;
 }
-function checkWinCol(n) {
+function checkWinCol(board, n) {
 	var firstPiece = board[n][0].getPiece();
 	if(firstPiece == PLAYERS.N)
 		return PLAYERS.N;
@@ -394,7 +398,7 @@ function checkWinCol(n) {
 	}
 	return firstPiece;
 }
-function checkWinDiag1() {
+function checkWinDiag1(board) {
 	var firstPiece = board[0][0].getPiece();
 	if(firstPiece == PLAYERS.N)
 		return PLAYERS.N;
@@ -405,7 +409,7 @@ function checkWinDiag1() {
 	}
 	return firstPiece;
 }
-function checkWinDiag2() {
+function checkWinDiag2(board) {
 	var firstPiece = board[0][BOARD_DIMENSIONS-1].getPiece();
 	if(firstPiece == PLAYERS.N)
 		return PLAYERS.N;
