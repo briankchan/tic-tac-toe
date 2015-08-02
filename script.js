@@ -412,3 +412,91 @@ function checkWinDiag2(board) {
 	}
 	return firstPiece;
 }
+
+
+
+function calculateGameInProgressScore(board, player) {
+	var score = 0;
+	//var winner = checkWin(board); //check for winning separately
+	//if (winner == player) {
+	//	return 1000000000;
+	//}
+	//else if (winner != PLAYERS.N) {
+	//	score -= 1000000000;
+	//}
+	
+	for(var i=0; i<BOARD_DIMENSIONS; i++)
+		for(var j=0; j<BOARD_DIMENSIONS; j++) {
+			var tile = board[i][j];
+			
+			var piece = tile.getPiece();
+			if (piece == player) score += 1000;
+			else if (piece != PLAYERS.N) score -= 1000;
+			
+			var controller = tile.getController();
+			if (controller == player) score += 1;
+			else if (controller != PLAYERS.N) score -= 1;
+		}
+	
+	for(var i=0; i<BOARD_DIMENSIONS; i++) {
+		score += calculateRowScore(board, player, i);
+		score += calculateColScore(board, player, i);
+	}
+	score += calculateDiag1Score(board, player);
+	score += calculateDiag2Score(board, player);
+}
+
+function calculateColScore(board, player, n) {
+	return calculateLineScore(player, function(i) {
+		return board[n][i]
+	});
+}
+function calculateRowScore(board, player, n) {
+	return calculateLineScore(player, function(i) {
+		return board[i][n]
+	});
+}
+function calculateDiag1Score(board, player) {
+	return calculateLineScore(player, function(i) {
+		return board[i][i]
+	});
+}
+function calculateDiag2Score(board, player) {
+	return calculateLineScore(player, function(i) {
+		return board[i][BOARD_DIMENSIONS - i - 1]
+	});
+}
+
+function calculateLineScore(player, tileGetterFunction) {
+	var playerPieces = 0;
+	var opponentPieces = 0;
+	var playerTiles = 0;
+	var opponentTiles = 0;
+	for(var i=0; i<BOARD_DIMENSIONS; i++) {
+		var tile = tileGetterFunction(i);
+		
+		var piece = tile.getPiece();
+		if (piece == player) playerPieces++;
+		else if(piece != PLAYERS.N) opponentPieces++;
+		
+		var controller = tile.getController();
+		if (controller == player) playerTiles++;
+		else if(controller != PLAYERS.N) opponentTiles++;
+	}
+	return calculateLineScoreHelper(playerPieces, opponentPieces, playerTiles, opponentTiles);
+}
+
+function calculateLineScoreHelper(playerPieces, opponentPieces, playerTiles, opponentTiles) {
+	if(playerPieces == opponentPieces) return 0;
+	if(playerPieces < 2 && opponentPieces < 2) return 0;
+	
+	var score = 0;
+	if(playerPieces == 3) {
+		score = (opponentPieces > 0) ? 100 : 500;
+	}
+	if(playerPieces == 2) {
+		score = (opponentPieces > 0) ? 50 : 100;
+	}
+	
+	return score + playerTiles*10 - opponentTiles*10;
+}
