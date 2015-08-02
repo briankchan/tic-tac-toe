@@ -33,7 +33,7 @@ var ACTIONS = {
 		doAction: function(board, player, tile) {
 			if((tile.getController() == player || tile.getController() == PLAYERS.N)) {
 				if (tile.getPiece() == PLAYERS.N) {
-					tile.set(player);
+					tile.setPiece(player);
 					setErrorText("");
 					return true;
 				} else setErrorText("Not an empty tile.");
@@ -99,7 +99,7 @@ $(function() {
 	
 	for (var i = 1; i < 3; i++) //hardcode starting condition for 4x4 because reasons
 		for (var j = 1; j < 3; j++) {
-			board[i][j].setOControl();
+			board[i][j].setController(PLAYERS.O);
 		}
 	//canvas.add(createXIndicator());
 	
@@ -123,7 +123,7 @@ $(function() {
 	errorText.lineHeight = 30;
 	errorText.lineWidth = 350;
 	
-	incrementPhase();
+	startNextPhase();
 	
 	stage.addChild(container, errorText);
 	
@@ -134,7 +134,7 @@ function Tile(x, y) {
 	this.x = x;
 	this.y = y;
 	
-	this.owner = PLAYERS.N;
+	this.controller = PLAYERS.N;
 	this.tileShape = new createjs.Shape(N_CONTROLLED_GRAPHIC);
 	this.piece = PLAYERS.N;
 	this.pieceShape = new createjs.Shape(EMPTY_GRAPHIC);
@@ -153,10 +153,10 @@ function Tile(x, y) {
 	
 	stage.addChild(container);
 }
-Tile.prototype.set = function(player) {
+Tile.prototype.setPiece = function(player) {
 	this.piece = player;
 	if(player != PLAYERS.N) {
-		this.owner = player;
+		this.controller = player;
 	}
 	
 	this.updateStage();
@@ -164,20 +164,12 @@ Tile.prototype.set = function(player) {
 Tile.prototype.getPiece = function() {
 	return this.piece;
 };
-Tile.prototype.setNControl = function() {
-	this.owner = PLAYERS.N;
-	this.updateStage();
-};
-Tile.prototype.setXControl = function() {
-	this.owner = PLAYERS.X;
-	this.updateStage();
-};
-Tile.prototype.setOControl = function() {
-	this.owner = PLAYERS.O;
+Tile.prototype.setController = function(controller) {
+	this.controller = controller;
 	this.updateStage();
 };
 Tile.prototype.getController = function() {
-	return this.owner;
+	return this.controller;
 };
 Tile.prototype.select = function() {
 	this.selected = true;
@@ -198,11 +190,11 @@ Tile.prototype.updateStage = function() {
 		this.pieceShape.graphics = O_GRAPHIC;
 	}
 	
-	if (this.owner == PLAYERS.N) {
+	if (this.controller == PLAYERS.N) {
 		this.tileShape.graphics = N_CONTROLLED_GRAPHIC;
-	} if (this.owner == PLAYERS.X) {
+	} if (this.controller == PLAYERS.X) {
 		this.tileShape.graphics = X_CONTROLLED_GRAPHIC;
-	} if (this.owner == PLAYERS.O) {
+	} if (this.controller == PLAYERS.O) {
 		this.tileShape.graphics = O_CONTROLLED_GRAPHIC;
 	}
 	
@@ -218,39 +210,39 @@ Tile.prototype.isNeighbor = function(tile) {
 
 function handleClick(tile) {
 	if (phaseInvalid) {
-		incrementPhase();
+		startNextPhase();
 	} else if(phase == PHASES.START) { //reset board
 		resetBoard(board);
 		
 		turnCount = 0;
 		
-		incrementPhase();
+		startNextPhase();
 	} else if (phase == PHASES.X_MOVE) {
 		if(movePiece(PLAYERS.X, tile))
-			incrementPhase();
+			startNextPhase();
 	} else if (phase == PHASES.X_ACTION) {
 		if (doAction(board, ACTIONS.PLACE, PLAYERS.X, tile))
-			incrementPhase();
+			startNextPhase();
 	} else if (phase == PHASES.O_ACTION) {
 		if (doAction(board, ACTIONS.PLACE, PLAYERS.O, tile))
-			incrementPhase();
+			startNextPhase();
 	} else if (phase == PHASES.O_MOVE) {
 		if(movePiece(PLAYERS.O, tile))
-			incrementPhase();
+			startNextPhase();
 	}
 }
 
 function resetBoard(board) {
 	for (var i = 0; i < BOARD_DIMENSIONS; i++)
 		for (var j = 0; j < BOARD_DIMENSIONS; j++) {
-			board[i][j].set(PLAYERS.N);
+			board[i][j].setPiece(PLAYERS.N);
 			if(i>=1 && i<=2 && j>=1 && j<=2)//hardcode starting condition for 4x4 because reasons
-				board[i][j].setOControl();
-			else board[i][j].setNControl();
+				board[i][j].setController(PLAYERS.O);
+			else board[i][j].setController(PLAYERS.N);
 		}
 }
 
-function incrementPhase() {
+function startNextPhase() {
 	phaseInvalid = false;
 	setErrorText("");
 	
@@ -266,11 +258,7 @@ function incrementPhase() {
 		return;
 	}
 	
-	phase++;
-	if(phase > PHASES.LAST) {
-		phase = PHASES.FIRST;
-		turnCount++;
-	}
+	phase = incrementPhase(phase);
 	
 	if(phase == PHASES.X_MOVE) {
 		turnIndicator.graphics = X_GRAPHIC;
@@ -308,6 +296,10 @@ function incrementPhase() {
 	stage.update();
 }
 
+function incrementPhase(phase) {
+	return (++phase > PHASES.LAST) ? PHASES.FIRST : phase;
+}
+
 function setErrorText(text) {
 	errorText.text = text;
 	stage.update();
@@ -324,9 +316,9 @@ function movePiece(player, tile) {
 		setErrorText("");
 	}else if(tile.isNeighbor(selectedTile)) {
 		if (tile.getPiece() == PLAYERS.N) {
-			selectedTile.set(PLAYERS.N);
+			selectedTile.setPiece(PLAYERS.N);
 			selectedTile.deselect();
-			tile.set(player);
+			tile.setPiece(player);
 			setErrorText("");
 			return true;
 		} else {
