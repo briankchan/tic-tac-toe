@@ -163,7 +163,7 @@ Tile.prototype.getController = function() {
 };
 Tile.prototype.select = function() {
 	this.selected = true;
-	selectedTile = this;
+	selectedTile = this; //TODO: this is ugly. make selectedTile a property of boardModel
 };
 Tile.prototype.deselect = function() {
 	this.selected = false;
@@ -174,6 +174,13 @@ Tile.prototype.isSelected = function() {
 };
 Tile.prototype.isNeighbor = function(tile) {
 	return Math.abs(this.x - tile.x)<=1 && Math.abs(this.y - tile.y)<=1 
+};
+Tile.prototype.copy = function() {
+	var tile = new Tile(this.x, this.y);
+	tile.piece = this.piece;
+	tile.controller = this.controller;
+	tile.selected = this.selected;
+	return tile;
 };
 
 function TileGraphics(x, y, modelTile) {
@@ -430,6 +437,17 @@ function checkWinDiag2(board) {
 }
 
 
+function copyBoardModel(board) {
+	var copy = new Array(BOARD_DIMENSIONS);
+	for (var i=0; i<BOARD_DIMENSIONS; i++){
+		copy[i] = new Array(BOARD_DIMENSIONS);
+		for (var j=0; j<BOARD_DIMENSIONS; j++) {
+			copy[i][j] = board[i][j].copy();
+		}
+	}
+	
+	return copy;
+}
 
 function calculateGameInProgressScore(board, player) {
 	var score = 0;
