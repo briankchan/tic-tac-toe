@@ -67,11 +67,12 @@ var O_GRAPHIC = new createjs.Graphics().f("transparent").s("darkred").ss(5)
 var stage;
 
 var boardModel = new Array(BOARD_DIMENSIONS);
+var boardGraphics = new Array(BOARD_DIMENSIONS);
 for(var i=0; i<BOARD_DIMENSIONS; i++){
 	boardModel[i] = new Array(BOARD_DIMENSIONS);
+	boardGraphics[i] = new Array(BOARD_DIMENSIONS);
 }
 
-var boardGraphics;
 
 var phase;
 var phaseInvalid;
@@ -94,9 +95,12 @@ $(function() {
 	
 	for (var i=0; i<BOARD_DIMENSIONS; i++) {
 		for (var j=0; j<BOARD_DIMENSIONS; j++) {
-			boardModel[i][j] = new Tile(i,j);
+			var tile = new Tile(i,j)
+			boardModel[i][j] = tile;
+			boardGraphics[i][j] = new TileGraphics(i,j,tile);
 		}
 	}
+	resetBoard(boardModel);
 	
 	turnIndicator = new createjs.Shape();
 	turnText = new createjs.Text("","32px Arial", "black");
@@ -118,50 +122,40 @@ $(function() {
 	stage.addChild(turnIndicatorContainer, errorText);
 	
 	phase = PHASES.START;
-	resetBoard(boardModel);
 	startNextPhase();
 	turnCount = 0;
 	
-	stage.update();
+	updateBoardGraphics();
 });
+
+function updateBoardGraphics() {
+	for (var i=0; i<BOARD_DIMENSIONS; i++)
+		for (var j=0; j<BOARD_DIMENSIONS; j++) {
+			boardGraphics[i][j].update();
+		}
+	
+	stage.update();
+}
 
 function Tile(x, y) {
 	this.x = x;
 	this.y = y;
 	
 	this.controller = PLAYERS.N;
-	this.tileShape = new createjs.Shape(N_CONTROLLED_GRAPHIC);
 	this.piece = PLAYERS.N;
-	this.pieceShape = new createjs.Shape(EMPTY_GRAPHIC);
 	this.selected = false;
-	this.selectShape = new createjs.Shape(EMPTY_GRAPHIC);
-	
-	var container = new createjs.Container();
-	container.addChild(this.tileShape, this.pieceShape, this.selectShape);
-	container.x = BOARD_SIZE/BOARD_DIMENSIONS*x;
-	container.y = BOARD_SIZE/BOARD_DIMENSIONS*y;
-	
-	var that = this;
-	container.addEventListener("click", function(e) {
-		handleClick(that);
-	});
-	
-	stage.addChild(container);
 }
 Tile.prototype.setPiece = function(player) {
 	this.piece = player;
 	if(player != PLAYERS.N) {
 		this.controller = player;
 	}
-	
-	this.updateStage();
 };
 Tile.prototype.getPiece = function() {
 	return this.piece;
 };
 Tile.prototype.setController = function(controller) {
 	this.controller = controller;
-	this.updateStage();
 };
 Tile.prototype.getController = function() {
 	return this.controller;
@@ -169,38 +163,58 @@ Tile.prototype.getController = function() {
 Tile.prototype.select = function() {
 	this.selected = true;
 	selectedTile = this;
-	this.updateStage();
 };
 Tile.prototype.deselect = function() {
 	this.selected = false;
 	selectedTile = null;
-	this.updateStage();
 };
-Tile.prototype.updateStage = function() {
-	if (this.piece == PLAYERS.N) {
-		this.pieceShape.graphics = EMPTY_GRAPHIC;
-	} else if (this.piece == PLAYERS.X) {
-		this.pieceShape.graphics = X_GRAPHIC;
-	} else if (this.piece == PLAYERS.O){
-		this.pieceShape.graphics = O_GRAPHIC;
-	}
-	
-	if (this.controller == PLAYERS.N) {
-		this.tileShape.graphics = N_CONTROLLED_GRAPHIC;
-	} if (this.controller == PLAYERS.X) {
-		this.tileShape.graphics = X_CONTROLLED_GRAPHIC;
-	} if (this.controller == PLAYERS.O) {
-		this.tileShape.graphics = O_CONTROLLED_GRAPHIC;
-	}
-	
-	if(this.selected) {
-		this.selectShape.graphics = SELECT_GRAPHIC;
-	} else this.selectShape.graphics = EMPTY_GRAPHIC;
-	
-	stage.update();
+Tile.prototype.isSelected = function() {
+	return this.selected;
 };
 Tile.prototype.isNeighbor = function(tile) {
 	return Math.abs(this.x - tile.x)<=1 && Math.abs(this.y - tile.y)<=1 
+};
+
+function TileGraphics(x, y, modelTile) {
+	this.model = modelTile;
+	
+	this.tileShape = new createjs.Shape(N_CONTROLLED_GRAPHIC);
+	this.pieceShape = new createjs.Shape(EMPTY_GRAPHIC);
+	this.selectShape = new createjs.Shape(EMPTY_GRAPHIC);
+	
+	var container = new createjs.Container();
+	container.addChild(this.tileShape, this.pieceShape, this.selectShape);
+	container.x = BOARD_SIZE/BOARD_DIMENSIONS*x;
+	container.y = BOARD_SIZE/BOARD_DIMENSIONS*y;
+	
+	container.addEventListener("click", function(e) {
+		handleClick(modelTile);
+	});
+	
+	stage.addChild(container);
+}
+TileGraphics.prototype.update = function() {
+	var piece = this.model.getPiece();
+	if (piece == PLAYERS.N) {
+		this.pieceShape.graphics = EMPTY_GRAPHIC;
+	} else if (piece == PLAYERS.X) {
+		this.pieceShape.graphics = X_GRAPHIC;
+	} else if (piece == PLAYERS.O){
+		this.pieceShape.graphics = O_GRAPHIC;
+	}
+	
+	var controller = this.model.getController();
+	if (controller == PLAYERS.N) {
+		this.tileShape.graphics = N_CONTROLLED_GRAPHIC;
+	} if (controller == PLAYERS.X) {
+		this.tileShape.graphics = X_CONTROLLED_GRAPHIC;
+	} if (controller == PLAYERS.O) {
+		this.tileShape.graphics = O_CONTROLLED_GRAPHIC;
+	}
+	
+	if(this.model.isSelected()) {
+		this.selectShape.graphics = SELECT_GRAPHIC;
+	} else this.selectShape.graphics = EMPTY_GRAPHIC;
 };
 
 function handleClick(tile) {
@@ -213,7 +227,7 @@ function handleClick(tile) {
 		
 		startNextPhase();
 	} else if (phase == PHASES.X_MOVE) {
-		if(movePiece(PLAYERS.X, tile))
+		if(movePiece(PLAYERS.X, tile, selectedTile))
 			startNextPhase();
 	} else if (phase == PHASES.X_ACTION) {
 		if (doAction(boardModel, ACTIONS.PLACE, PLAYERS.X, tile))
@@ -222,9 +236,11 @@ function handleClick(tile) {
 		if (doAction(boardModel, ACTIONS.PLACE, PLAYERS.O, tile))
 			startNextPhase();
 	} else if (phase == PHASES.O_MOVE) {
-		if(movePiece(PLAYERS.O, tile))
+		if(movePiece(PLAYERS.O, tile, selectedTile))
 			startNextPhase();
 	}
+	
+	updateBoardGraphics();
 }
 
 function resetBoard(board) {
@@ -288,7 +304,6 @@ function startNextPhase() {
 			setErrorText("No pieces; click board to continue.");
 		}
 	}
-	stage.update();
 }
 
 function incrementPhase(phase) {
@@ -297,10 +312,9 @@ function incrementPhase(phase) {
 
 function setErrorText(text) {
 	errorText.text = text;
-	stage.update();
 }
 
-function movePiece(player, tile) {
+function movePiece(player, tile, selectedTile) {
 	if(selectedTile == null) {
 		if(tile.getPiece() == player){
 			tile.select();
