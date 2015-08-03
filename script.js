@@ -48,6 +48,7 @@ var BOARD_DIMENSIONS = 4;
 var TILE_SIZE = BOARD_SIZE / BOARD_DIMENSIONS;
 
 var BOARD_GRAPHIC = new createjs.Graphics().f("white").s("black").ss(1).drawRect(-1,-1,BOARD_SIZE+2,BOARD_SIZE+2);
+//the board is actually 2px larger than BOARD_SIZE in each direction to account for tile borders.
 
 var N_CONTROLLED_GRAPHIC = new createjs.Graphics().f("white").s("black").drawRect(1,1,TILE_SIZE-2,TILE_SIZE-2);
 var X_CONTROLLED_GRAPHIC = new createjs.Graphics().f("lightblue").s("black").drawRect(1,1,TILE_SIZE-2,TILE_SIZE-2);
@@ -65,11 +66,12 @@ var O_GRAPHIC = new createjs.Graphics().f("transparent").s("darkred").ss(5)
 
 var stage;
 
-var board = new Array(BOARD_DIMENSIONS);
+var boardModel = new Array(BOARD_DIMENSIONS);
 for(var i=0; i<BOARD_DIMENSIONS; i++){
-	board[i] = new Array(BOARD_DIMENSIONS);
+	boardModel[i] = new Array(BOARD_DIMENSIONS);
 }
-//the board is actually 2px larger than BOARD_SIZE in each direction.
+
+var boardGraphics;
 
 var phase;
 var phaseInvalid;
@@ -92,40 +94,33 @@ $(function() {
 	
 	for (var i=0; i<BOARD_DIMENSIONS; i++) {
 		for (var j=0; j<BOARD_DIMENSIONS; j++) {
-			board[i][j] = new Tile(i,j);
+			boardModel[i][j] = new Tile(i,j);
 		}
 	}
-	
-	
-	for (var i = 1; i < 3; i++) //hardcode starting condition for 4x4 because reasons
-		for (var j = 1; j < 3; j++) {
-			board[i][j].setController(PLAYERS.O);
-		}
-	//canvas.add(createXIndicator());
-	
-	phase = PHASES.START;
-	turnCount = 0;
 	
 	turnIndicator = new createjs.Shape();
 	turnText = new createjs.Text("","32px Arial", "black");
 	turnText.x = TILE_SIZE*9/10;
 	turnText.y = TILE_SIZE/2-16;
 	
-	var container = new createjs.Container();
-	container.addChild(turnIndicator, turnText);
+	var turnIndicatorContainer = new createjs.Container();
+	turnIndicatorContainer.addChild(turnIndicator, turnText);
 	
-	container.x = BOARD_SIZE*7/6;
-	container.y = TILE_SIZE;
+	turnIndicatorContainer.x = BOARD_SIZE*7/6;
+	turnIndicatorContainer.y = TILE_SIZE;
 	
 	errorText = new createjs.Text("","24px Arial", "black");
-	errorText.x = BOARD_SIZE*7/6 + TILE_SIZE*1/5;
+	errorText.x = BOARD_SIZE*7/6 + TILE_SIZE/5;
 	errorText.y = TILE_SIZE*5/2-12;
 	errorText.lineHeight = 30;
 	errorText.lineWidth = 350;
 	
-	startNextPhase();
+	stage.addChild(turnIndicatorContainer, errorText);
 	
-	stage.addChild(container, errorText);
+	phase = PHASES.START;
+	resetBoard(boardModel);
+	startNextPhase();
+	turnCount = 0;
 	
 	stage.update();
 });
@@ -211,8 +206,8 @@ Tile.prototype.isNeighbor = function(tile) {
 function handleClick(tile) {
 	if (phaseInvalid) {
 		startNextPhase();
-	} else if(phase == PHASES.START) { //reset board
-		resetBoard(board);
+	} else if(phase == PHASES.START) { //reset boardModel
+		resetBoard(boardModel);
 		
 		turnCount = 0;
 		
@@ -221,10 +216,10 @@ function handleClick(tile) {
 		if(movePiece(PLAYERS.X, tile))
 			startNextPhase();
 	} else if (phase == PHASES.X_ACTION) {
-		if (doAction(board, ACTIONS.PLACE, PLAYERS.X, tile))
+		if (doAction(boardModel, ACTIONS.PLACE, PLAYERS.X, tile))
 			startNextPhase();
 	} else if (phase == PHASES.O_ACTION) {
-		if (doAction(board, ACTIONS.PLACE, PLAYERS.O, tile))
+		if (doAction(boardModel, ACTIONS.PLACE, PLAYERS.O, tile))
 			startNextPhase();
 	} else if (phase == PHASES.O_MOVE) {
 		if(movePiece(PLAYERS.O, tile))
@@ -246,7 +241,7 @@ function startNextPhase() {
 	phaseInvalid = false;
 	setErrorText("");
 	
-	var winner = checkWin(board);
+	var winner = checkWin(boardModel);
 	if(winner != PLAYERS.N) {
 		phase = PHASES.START;
 		
@@ -264,7 +259,7 @@ function startNextPhase() {
 		turnIndicator.graphics = X_GRAPHIC;
 		turnText.text = "'s move";
 		
-		if(!boardHasPiece(board, PLAYERS.X)) {
+		if(!boardHasPiece(boardModel, PLAYERS.X)) {
 			phaseInvalid = true;
 			setErrorText("No pieces; click board to continue.");
 		}
@@ -272,7 +267,7 @@ function startNextPhase() {
 		turnIndicator.graphics = X_GRAPHIC;
 		turnText.text = "'s action";
 		
-		if(turnCount>0 && !playerCanUseAction(board, ACTIONS.PLACE, PLAYERS.X)) {
+		if(turnCount>0 && !playerCanUseAction(boardModel, ACTIONS.PLACE, PLAYERS.X)) {
 			phaseInvalid = true;
 			setErrorText("No valid action; click board to continue.");
 		}
@@ -280,7 +275,7 @@ function startNextPhase() {
 		turnIndicator.graphics = O_GRAPHIC;
 		turnText.text = "'s action";
 		
-		if(!playerCanUseAction(board, ACTIONS.PLACE, PLAYERS.O)) {
+		if(!playerCanUseAction(boardModel, ACTIONS.PLACE, PLAYERS.O)) {
 			phaseInvalid = true;
 			setErrorText("No valid action; click board to continue.");
 		}
@@ -288,7 +283,7 @@ function startNextPhase() {
 		turnIndicator.graphics = O_GRAPHIC;
 		turnText.text = "'s move";
 		
-		if(!boardHasPiece(board, PLAYERS.O)) {
+		if(!boardHasPiece(boardModel, PLAYERS.O)) {
 			phaseInvalid = true;
 			setErrorText("No pieces; click board to continue.");
 		}
@@ -350,8 +345,9 @@ function doAction(board, action, player, tile) {
 }
 
 function checkWin(board) {
+	var winner;
 	for (var i=0; i<BOARD_DIMENSIONS; i++) {
-		var winner = checkWinRow(board, i);
+		winner = checkWinRow(board, i);
 		if (winner != PLAYERS.N)
 			return winner;
 		winner = checkWinCol(board, i);
@@ -359,7 +355,7 @@ function checkWin(board) {
 			return winner;
 	}
 	
-	var winner = checkWinDiag1(board);
+	winner = checkWinDiag1(board);
 	if (winner != PLAYERS.N)
 		return winner;
 	winner = checkWinDiag2(board);
@@ -438,12 +434,14 @@ function calculateGameInProgressScore(board, player) {
 			else if (controller != PLAYERS.N) score -= 1;
 		}
 	
-	for(var i=0; i<BOARD_DIMENSIONS; i++) {
-		score += calculateRowScore(board, player, i);
-		score += calculateColScore(board, player, i);
+	for(var n=0; n<BOARD_DIMENSIONS; n++) {
+		score += calculateRowScore(board, player, n);
+		score += calculateColScore(board, player, n);
 	}
 	score += calculateDiag1Score(board, player);
 	score += calculateDiag2Score(board, player);
+	
+	return score;
 }
 
 function calculateColScore(board, player, n) {
