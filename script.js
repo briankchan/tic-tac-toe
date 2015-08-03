@@ -16,6 +16,7 @@ var PHASES = {
 var ACTIONS = {
 	PLACE: {
 		checkCondition: function(board, player) {
+			//two adjacent tiles owned by player
 			for(var i= 0; i<BOARD_DIMENSIONS; i++) {
 				for(var j=0; j<BOARD_DIMENSIONS; j++) {
 					var tile = board[i][j];
@@ -307,7 +308,12 @@ function startNextPhase() {
 }
 
 function incrementPhase(phase) {
-	return (++phase > PHASES.LAST) ? PHASES.FIRST : phase;
+	phase++;
+	if(phase > PHASES.LAST){
+		turnCount++;
+		return PHASES.FIRST
+	}
+	else return phase;
 }
 
 function setErrorText(text) {
