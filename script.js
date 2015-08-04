@@ -536,3 +536,63 @@ function calculateLineScoreHelper(playerPieces, opponentPieces, playerTiles, opp
 	
 	return score + playerTiles*10 - opponentTiles*10;
 }
+
+function findMoves(board, phase) {
+	if(phase == PHASES.X_MOVE) {
+		return findMoveMoves(board, PLAYERS.X);
+	} else if (phase == PHASES.X_ACTION) {
+		return findActionMoves(board, ACTIONS.PLACE, PLAYERS.X);
+	} else if (phase == PHASES.O_ACTION) {
+		return findActionMoves(board, ACTIONS.PLACE, PLAYERS.O);
+	} else if (phase == PHASES.O_MOVE) {
+		return findMoveMoves(board, PLAYERS.O);
+	}
+}
+
+function findMoveMoves(board, player) {
+	var moves = [];
+	for (var i=0; i<BOARD_DIMENSIONS; i++) {
+		for (var j=0; j<BOARD_DIMENSIONS; j++) {
+			if (board[i][j].getPiece() == player) {
+				var left = makeMoveIfValid(board,i,j,i-1,j);
+				if (left) moves.push(left);
+				var right = makeMoveIfValid(board,i,j,i+1,j);
+				if (right) moves.push(right);
+				var up = makeMoveIfValid(board,i,j,i,j-1);
+				if (up) moves.push(up);
+				var down = makeMoveIfValid(board,i,j,i,j+1);
+				if (down) moves.push(down);
+			}
+		}
+	}
+}
+
+function makeMoveIfValid(board, x, y, xNew, yNew, player) {
+	if(xNew>=0 && xNew<BOARD_DIMENSIONS && yNew>=0 && yNew<BOARD_DIMENSIONS) {
+		if(board[xNew][yNew].getPiece() != PLAYERS.N) {
+			var copy = copyBoardModel(board);
+			movePiece(player, copy[x][y], copy[xNew][yNew]);
+			return copy;
+		}
+	}
+}
+
+function findActionMoves(board, action, player) {
+	if (!action.checkCondition(board, player))
+		return [];
+	
+	var moves = [];
+	for (var i=0; i<BOARD_DIMENSIONS; i++) {
+		for (var j=0; j<BOARD_DIMENSIONS; j++) {
+			var tile = board[i][j];
+			var controller = tile.getController();
+			if(tile.getPiece() == PLAYERS.N && (controller == player || controller == PLAYERS.N)) {
+				var copy = copyBoardModel(board);
+				doAction(copy, action, player, copy[i][j]);
+				moves.push(copy);
+			}
+		}
+	}
+	
+	return moves;
+}
