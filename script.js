@@ -581,6 +581,14 @@ function findMoveMoves(board, player) {
 			}
 		}
 	}
+	
+	if(moves.length == 0)
+		moves.push({
+			clicks: {},
+			board: copyBoardModel(board)
+		});
+	
+	return moves;
 }
 
 function makeMoveIfValid(board, x, y, xNew, yNew, player) {
@@ -588,27 +596,39 @@ function makeMoveIfValid(board, x, y, xNew, yNew, player) {
 		if(board[xNew][yNew].getPiece() != PLAYERS.N) {
 			var copy = copyBoardModel(board);
 			movePiece(player, copy[x][y], copy[xNew][yNew]);
-			return copy;
+			return {
+				clicks: {x:x, y:y, fromX:xNew, fromY:yNew},
+				board: copy
+			};
 		}
 	}
 }
 
 function findActionMoves(board, action, player) {
-	if (!action.checkCondition(board, player))
-		return [];
-	
 	var moves = [];
-	for (var i=0; i<BOARD_DIMENSIONS; i++) {
-		for (var j=0; j<BOARD_DIMENSIONS; j++) {
-			var tile = board[i][j];
-			var controller = tile.getController();
-			if(tile.getPiece() == PLAYERS.N && (controller == player || controller == PLAYERS.N)) {
-				var copy = copyBoardModel(board);
-				doAction(copy, action, player, copy[i][j]);
-				moves.push(copy);
+	
+	if (action.checkCondition(board, player) || (turnCount == 0 && player==PLAYERS.X)) {//TODO: fix terrible hack
+		for (var i = 0; i < BOARD_DIMENSIONS; i++) {
+			for (var j = 0; j < BOARD_DIMENSIONS; j++) {
+				var tile = board[i][j];
+				var controller = tile.getController();
+				if (tile.getPiece() == PLAYERS.N && (controller == player || controller == PLAYERS.N)) {
+					var copy = copyBoardModel(board);
+					doAction(copy, action, player, copy[i][j]);
+					moves.push({
+						clicks: { x: i, y: j },
+						board: copy
+					});
+				}
 			}
 		}
 	}
+	
+	if(moves.length == 0)
+		moves.push({
+			clicks: {},
+			board: copyBoardModel(board)
+		});
 	
 	return moves;
 }
