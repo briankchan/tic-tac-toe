@@ -35,6 +35,11 @@ var ACTIONS = {
 			if((tile.getController() == player || tile.getController() == PLAYERS.N)) {
 				if (tile.getPiece() == PLAYERS.N) {
 					tile.setPiece(player);
+					moves.push({
+						action: ACTIONS.PLACE,
+						x: tile.getX(),
+						y: tile.getY()
+					});
 					setErrorText("");
 					return true;
 				} else setErrorText("Not an empty tile.");
@@ -75,6 +80,8 @@ for(var i=0; i<BOARD_DIMENSIONS; i++){
 }
 
 
+var moves;
+
 var phase;
 var phaseInvalid;
 var turnCount;
@@ -96,12 +103,11 @@ $(function() {
 	
 	for (var i=0; i<BOARD_DIMENSIONS; i++) {
 		for (var j=0; j<BOARD_DIMENSIONS; j++) {
-			var tile = new Tile(i,j)
+			var tile = new Tile(i,j);
 			boardModel[i][j] = tile;
 			boardGraphics[i][j] = new TileGraphics(i,j,tile);
 		}
 	}
-	resetBoard(boardModel);
 	
 	turnIndicator = new createjs.Shape();
 	turnText = new createjs.Text("","32px Arial", "black");
@@ -123,8 +129,8 @@ $(function() {
 	stage.addChild(turnIndicatorContainer, errorText);
 	
 	phase = PHASES.START;
+	resetGame(boardModel);
 	startNextPhase();
-	turnCount = 0;
 	
 	updateBoardGraphics();
 });
@@ -146,6 +152,8 @@ function Tile(x, y) {
 	this.piece = PLAYERS.N;
 	this.selected = false;
 }
+Tile.prototype.getX = function() { return this.x; };
+Tile.prototype.getY = function() { return this.y; };
 Tile.prototype.setPiece = function(player) {
 	this.piece = player;
 	if(player != PLAYERS.N) {
@@ -227,12 +235,10 @@ TileGraphics.prototype.update = function() {
 
 function handleClick(tile) {
 	if (phaseInvalid) {
+		moves.push({ action: null });
 		startNextPhase();
 	} else if(phase == PHASES.START) { //reset boardModel
-		resetBoard(boardModel);
-		
-		turnCount = 0;
-		
+		resetGame(boardModel);
 		startNextPhase();
 	} else if (phase == PHASES.X_MOVE) {
 		if(movePiece(PLAYERS.X, tile, selectedTile))
@@ -251,7 +257,10 @@ function handleClick(tile) {
 	updateBoardGraphics();
 }
 
-function resetBoard(board) {
+function resetGame(board) {
+	moves = [];
+	turnCount = 0;
+	
 	for (var i = 0; i < BOARD_DIMENSIONS; i++)
 		for (var j = 0; j < BOARD_DIMENSIONS; j++) {
 			board[i][j].setPiece(PLAYERS.N);
@@ -341,6 +350,13 @@ function movePiece(player, tile, selectedTile) {
 			selectedTile.setPiece(PLAYERS.N);
 			selectedTile.deselect();
 			tile.setPiece(player);
+			moves.push({
+				action: "move", //TODO: turn move into an action like place
+				x: tile.getX(),
+				y: tile.getY(),
+				fromX: selectedTile.getX(),
+				fromY: selectedTile.getY()
+			});
 			setErrorText("");
 			return true;
 		} else {
