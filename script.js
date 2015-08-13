@@ -130,7 +130,7 @@ $(function() {
 	stage.addChild(turnIndicatorContainer, errorText);
 	
 	game.phase = PHASES.START;
-	resetGame(game.board);
+	resetGame(game);
 	startNextPhase();
 	
 	updateBoardGraphics();
@@ -239,7 +239,7 @@ function handleClick(tile) {
 		moves.push({ action: null });
 		startNextPhase();
 	} else if(game.phase == PHASES.START) {
-		resetGame(game.board);
+		resetGame(game);
 		startNextPhase();
 	} else if (game.phase == PHASES.X_MOVE) {
 		if(movePiece(PLAYERS.X, tile, selectedTile))
@@ -258,10 +258,13 @@ function handleClick(tile) {
 	updateBoardGraphics();
 }
 
-function resetGame(board) {
+function resetGame(game) {
 	moves = [];
 	game.turnCount = 0;
+	game.phaseInvalid = false;
+	aiTree = {};
 	
+	var board = game.board;
 	for (var i = 0; i < BOARD_DIMENSIONS; i++)
 		for (var j = 0; j < BOARD_DIMENSIONS; j++) {
 			board[i][j].setPiece(PLAYERS.N);
@@ -287,6 +290,7 @@ function startNextPhase() {
 		return;
 	}
 	
+	if(game.phase == PHASES.LAST) game.turnCount++;
 	game.phase = incrementPhase(game.phase);
 	
 	if(game.phase == PHASES.X_MOVE) {
@@ -327,7 +331,6 @@ function startNextPhase() {
 function incrementPhase(phase) {
 	phase++;
 	if(phase > PHASES.LAST){
-		game.turnCount++;
 		return PHASES.FIRST
 	}
 	else return phase;
@@ -454,7 +457,16 @@ function checkWinDiag2(board) {
 }
 
 
-function copyBoardModel(board) {
+function copyGame(game) {
+	return {
+		board: copyBoard(game.board),
+		turnCount: game.turnCount,
+		phase: game.phase,
+		phaseInvalid: game.phaseInvalid
+	}
+}
+
+function copyBoard(board) {
 	var copy = new Array(BOARD_DIMENSIONS);
 	for (var i=0; i<BOARD_DIMENSIONS; i++){
 		copy[i] = new Array(BOARD_DIMENSIONS);
@@ -554,82 +566,91 @@ function calculateLineScoreHelper(playerPieces, opponentPieces, playerTiles, opp
 	return score + playerTiles*10 - opponentTiles*10;
 }
 
-function findMoves(board, phase) {
-	if(phase == PHASES.X_MOVE) {
-		return findMoveMoves(board, PLAYERS.X);
-	} else if (phase == PHASES.X_ACTION) {
-		return findActionMoves(board, ACTIONS.PLACE, PLAYERS.X);
-	} else if (phase == PHASES.O_ACTION) {
-		return findActionMoves(board, ACTIONS.PLACE, PLAYERS.O);
-	} else if (phase == PHASES.O_MOVE) {
-		return findMoveMoves(board, PLAYERS.O);
+function findMoves(game) {
+	if(game.phase == PHASES.X_MOVE) {
+		return findMoveMoves(game, PLAYERS.X);
+	} else if (game.phase == PHASES.X_ACTION) {
+		return findActionMoves(game, ACTIONS.PLACE, PLAYERS.X);
+	} else if (game.phase == PHASES.O_ACTION) {
+		return findActionMoves(game, ACTIONS.PLACE, PLAYERS.O);
+	} else if (game.phase == PHASES.O_MOVE) {
+		return findMoveMoves(game, PLAYERS.O);
 	}
 }
 
-function findMoveMoves(board, player) {
+function findMoveMoves(game, player) {
 	var moves = [];
 	for (var i=0; i<BOARD_DIMENSIONS; i++) {
 		for (var j=0; j<BOARD_DIMENSIONS; j++) {
-			if (board[i][j].getPiece() == player) {
-				var left = makeMoveIfValid(board,i,j,i-1,j);
+			if (game.board[i][j].getPiece() == player) {
+				var left = makeMoveIfValid(game,i,j,i-1,j);
 				if (left) moves.push(left);
-				var right = makeMoveIfValid(board,i,j,i+1,j);
+				var right = makeMoveIfValid(game,i,j,i+1,j);
 				if (right) moves.push(right);
-				var up = makeMoveIfValid(board,i,j,i,j-1);
+				var up = makeMoveIfValid(game,i,j,i,j-1);
 				if (up) moves.push(up);
-				var down = makeMoveIfValid(board,i,j,i,j+1);
+				var down = makeMoveIfValid(game,i,j,i,j+1);
 				if (down) moves.push(down);
 			}
 		}
 	}
 	
-	if(moves.length == 0)
+	if(moves.length == 0) {
+		var copy = copyGame(game);
+		copy.phase = incrementPhase(copy.phase);
 		moves.push({
 			clicks: {},
-			board: copyBoardModel(board)
+			game: copy
 		});
+	}
 	
 	return moves;
 }
 
-function makeMoveIfValid(board, x, y, xNew, yNew, player) {
+function makeMoveIfValid(game, x, y, xNew, yNew, player) {
 	if(xNew>=0 && xNew<BOARD_DIMENSIONS && yNew>=0 && yNew<BOARD_DIMENSIONS) {
-		if(board[xNew][yNew].getPiece() != PLAYERS.N) {
-			var copy = copyBoardModel(board);
-			movePiece(player, copy[x][y], copy[xNew][yNew]);
+		if(game.board[xNew][yNew].getPiece() != PLAYERS.N) {
+			var copy = copyGame(game);
+			copy.phase = incrementPhase(copy.phase);
+			movePiece(player, copy.board[x][y], copy.board[xNew][yNew]);
 			return {
 				clicks: {x:x, y:y, fromX:xNew, fromY:yNew},
-				board: copy
+				game: copy
 			};
 		}
 	}
 }
 
-function findActionMoves(board, action, player) {
+function findActionMoves(game, action, player) {
 	var moves = [];
 	
-	if (action.checkCondition(board, player) || (game.turnCount == 0 && player==PLAYERS.X)) {//TODO: fix terrible hack
+	if (action.checkCondition(game.board, player) || (game.turnCount == 0 && player==PLAYERS.X && action == ACTIONS.PLACE)) {
+		var board = game.board;
 		for (var i = 0; i < BOARD_DIMENSIONS; i++) {
 			for (var j = 0; j < BOARD_DIMENSIONS; j++) {
 				var tile = board[i][j];
 				var controller = tile.getController();
 				if (tile.getPiece() == PLAYERS.N && (controller == player || controller == PLAYERS.N)) {
-					var copy = copyBoardModel(board);
-					doAction(copy, action, player, copy[i][j]);
+					var copy = copyGame(game);
+					copy.phase = incrementPhase(copy.phase);
+					doAction(copy.board, action, player, copy.board[i][j]);
 					moves.push({
 						clicks: { x: i, y: j },
-						board: copy
+						game: copy
 					});
 				}
 			}
 		}
 	}
 	
-	if(moves.length == 0)
+	if(moves.length == 0) {
+		var copy = copyGame(game);
+		copy.phase = incrementPhase(copy.phase);
 		moves.push({
 			clicks: {},
-			board: copyBoardModel(board)
+			game: copy
 		});
+	}
 	
 	return moves;
 }
