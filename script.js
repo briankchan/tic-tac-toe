@@ -303,9 +303,10 @@ function resetGame(game) {
 	for (var i = 0; i < BOARD_DIMENSIONS; i++)
 		for (var j = 0; j < BOARD_DIMENSIONS; j++) {
 			board[i][j].setPiece(PLAYERS.N);
-			if(i>=1 && i<=2 && j>=1 && j<=2)//hardcode starting condition for 4x4 because reasons
-				board[i][j].setController(PLAYERS.O);
-			else board[i][j].setController(PLAYERS.N);
+			//if(i>=1 && i<=2 && j>=1 && j<=2)//hardcode starting condition for 4x4 because reasons
+			//	board[i][j].setController(PLAYERS.O);
+			//else board[i][j].setController(PLAYERS.N);
+			board[i][j].setController(PLAYERS.N);
 		}
 }
 
@@ -348,7 +349,7 @@ function startNextPhase() {
 		turnIndicator.graphics = O_GRAPHIC;
 		turnText.text = "'s action";
 		
-		if(!playerCanUseAction(game.board, ACTIONS.PLACE, PLAYERS.O)) {
+		if(game.turnCount>0 && !playerCanUseAction(game.board, ACTIONS.PLACE, PLAYERS.O)) {
 			game.phaseInvalid = true;
 			setErrorText("No valid action; click board to continue.");
 		}
@@ -620,6 +621,11 @@ function copyBoard(board) {
 function calculateGameInProgressScore(board, player) {
 	var score = 0;
 	
+	if(ACTIONS.PLACE.checkCondition(board, PLAYERS.X))
+		score += (player == PLAYERS.X) ? 10000 : -10000;
+	if(ACTIONS.PLACE.checkCondition(board, PLAYERS.O))
+		score += (player == PLAYERS.O) ? 10000 : -10000;
+	
 	for(var i=0; i<BOARD_DIMENSIONS; i++)
 		for(var j=0; j<BOARD_DIMENSIONS; j++) {
 			var tile = board[i][j];
@@ -756,7 +762,7 @@ function makeMoveIfValid(game, x, y, xNew, yNew, player) {
 function findActionMoves(game, action, player) {
 	var moves = [];
 	
-	if (action.checkCondition(game.board, player) || (game.turnCount == 0 && player==PLAYERS.X && action == ACTIONS.PLACE)) {
+	if (action.checkCondition(game.board, player) || (game.turnCount == 0 && action == ACTIONS.PLACE)) {
 		var board = game.board;
 		for (var i = 0; i < BOARD_DIMENSIONS; i++) {
 			for (var j = 0; j < BOARD_DIMENSIONS; j++) {
