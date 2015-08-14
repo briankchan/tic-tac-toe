@@ -529,7 +529,7 @@ function minimax(game, player) {
 
 function getRandomElement(array) {
 	if(array)
-		return array[0/*Math.floor(Math.random()*array.length)*/];
+		return array[Math.floor(Math.random()*array.length)];
 }
 
 function clicksAreEqual(a, b) {
