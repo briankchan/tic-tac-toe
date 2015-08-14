@@ -85,6 +85,9 @@ for(var i=0; i<BOARD_DIMENSIONS; i++){
 	boardGraphics[i] = new Array(BOARD_DIMENSIONS);
 }
 
+
+var aiTree;
+
 var moves;
 
 var turnIndicator;
@@ -457,6 +460,107 @@ function checkWinDiag2(board) {
 }
 
 
+
+function minimax(game, player) {
+	var node;
+	if (!aiTree.moves)
+		node = {game: game};
+	else {
+		var moveOne = moves[moves.length-2]; //hardcoded for current phases
+		var moveTwo = moves[moves.length-1];
+		
+		var nodeOne = $.filter(aiTree.moves, function(node, i) {
+			clicksAreEqual(moveOne, node.clicks)
+		})[0];
+		node =  $.filter(nodeOne.moves, function(node, i) {
+			clicksAreEqual(moveTwo, node.clicks)
+		})[0];
+	}
+	
+	calculateGameScore(node, 8, player);
+	
+	console.log(node);
+	
+	var firstMove = getRandomElement(node.bestMove);
+	var secondMove = getRandomElement(firstMove.bestMove);
+	
+	aiTree[player] = secondMove;
+	
+	return [
+		firstMove.clicks,
+		secondMove.clicks
+	];
+}
+
+function getRandomElement(array) {
+	if(array)
+		return array[0/*Math.floor(Math.random()*array.length)*/];
+}
+
+function clicksAreEqual(a, b) {
+	if(a.x != undefined && a.x!=b.x) return false;
+	if(a.y != undefined && a.y!=b.y) return false;
+	if(a.fromX != undefined && a.fromX!=b.fromX) return false;
+	if(a.fromY != undefined && a.fromY!=b.fromY) return false;
+	return true;
+}
+
+function calculateGameScore(node, depth, player) {
+	
+	var winner = checkWin(node.game.board);
+	if (winner != PLAYERS.N) {
+		if (winner == player)
+			node.score = 1000000000 + depth;
+		else node.score = -1000000000 - depth;
+	} else if (false) { //TODO: check for draws
+		node.score = 0;
+	} else if (depth == 0) {
+		node.score = calculateGameInProgressScore(node.game.board, player);
+		node.moves = [];
+		node.bestMove = null;
+	} else {
+		var children;
+		
+		if(node.moves && node.moves.length > 0)
+			children = node.moves;
+		else {
+			children = findMoves(node.game);
+			node.moves = children;
+		}
+		
+		var phase = node.game.phase;
+		
+		var best;
+		var bestMove = [];
+		var isBetter;
+		//maximize score on ai's turn, minimize on opponent's turn
+		if (((phase == PHASES.X_ACTION || phase == PHASES.X_MOVE) && player == PLAYERS.X)
+				|| ((phase == PHASES.O_ACTION || phase == PHASES.O_MOVE) && player == PLAYERS.O)) {
+			best = -Infinity;
+			isBetter = gt;
+		} else {
+			best = Infinity;
+			isBetter = lt;
+		}
+		
+		$.each(children, function(i, child) {
+			calculateGameScore(child, depth - 1, player);
+			if (isBetter(child.score, best)) {
+				best = child.score;
+				bestMove.length = 0;
+				bestMove.push(child);
+			} else if (child.score == best) {
+				bestMove.push(child);
+			}
+		});
+		
+		node.score = best;
+		node.bestMove = bestMove;
+	}
+}
+function gt(score,best) {return score > best}
+function lt(score,best) {return score < best}
+
 function copyGame(game) {
 	return {
 		board: copyBoard(game.board),
@@ -480,13 +584,6 @@ function copyBoard(board) {
 
 function calculateGameInProgressScore(board, player) {
 	var score = 0;
-	//var winner = checkWin(board); //check for winning separately
-	//if (winner == player) {
-	//	return 1000000000;
-	//}
-	//else if (winner != PLAYERS.N) {
-	//	score -= 1000000000;
-	//}
 	
 	for(var i=0; i<BOARD_DIMENSIONS; i++)
 		for(var j=0; j<BOARD_DIMENSIONS; j++) {
