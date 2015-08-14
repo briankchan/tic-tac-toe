@@ -477,19 +477,22 @@ function minimax(game, player) {
 		})[0];
 	}
 	
-	calculateGameScore(node, 8, player);
+	calculateGameScore(node, 4, player);
 	
 	console.log(node);
 	
 	var firstMove = getRandomElement(node.bestMove);
 	var secondMove = getRandomElement(firstMove.bestMove);
 	
-	aiTree[player] = secondMove;
+	if(secondMove) {
+		aiTree[player] = secondMove;
+		
+		return [
+			firstMove.clicks,
+			secondMove.clicks
+		];
+	} else return [firstMove.clicks];
 	
-	return [
-		firstMove.clicks,
-		secondMove.clicks
-	];
 }
 
 function getRandomElement(array) {
@@ -680,14 +683,14 @@ function findMoveMoves(game, player) {
 	for (var i=0; i<BOARD_DIMENSIONS; i++) {
 		for (var j=0; j<BOARD_DIMENSIONS; j++) {
 			if (game.board[i][j].getPiece() == player) {
-				var left = makeMoveIfValid(game,i,j,i-1,j);
-				if (left) moves.push(left);
-				var right = makeMoveIfValid(game,i,j,i+1,j);
-				if (right) moves.push(right);
-				var up = makeMoveIfValid(game,i,j,i,j-1);
-				if (up) moves.push(up);
-				var down = makeMoveIfValid(game,i,j,i,j+1);
-				if (down) moves.push(down);
+				for (var iOffset = -1; iOffset<=1; iOffset++) {
+					for (var jOffset = -1; jOffset<=1; jOffset++) {
+						if(iOffset != 0 || jOffset != moves) { //all neighboring tiles, but not this tile
+							var move = makeMoveIfValid(game,i,j,i+iOffset,j+jOffset,player);
+							if (move) moves.push(move);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -706,12 +709,12 @@ function findMoveMoves(game, player) {
 
 function makeMoveIfValid(game, x, y, xNew, yNew, player) {
 	if(xNew>=0 && xNew<BOARD_DIMENSIONS && yNew>=0 && yNew<BOARD_DIMENSIONS) {
-		if(game.board[xNew][yNew].getPiece() != PLAYERS.N) {
+		if(game.board[xNew][yNew].getPiece() == PLAYERS.N) {
 			var copy = copyGame(game);
 			copy.phase = incrementPhase(copy.phase);
-			movePiece(player, copy.board[x][y], copy.board[xNew][yNew]);
+			movePiece(player, copy.board[xNew][yNew], copy.board[x][y]);
 			return {
-				clicks: {x:x, y:y, fromX:xNew, fromY:yNew},
+				clicks: {x:xNew, y:yNew, fromX:x, fromY:y},
 				game: copy
 			};
 		}
