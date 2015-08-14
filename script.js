@@ -86,7 +86,9 @@ for(var i=0; i<BOARD_DIMENSIONS; i++){
 }
 
 
+var ai = PLAYERS.O;
 var aiTree;
+var aiTurn;
 
 var moves;
 
@@ -208,7 +210,10 @@ function TileGraphics(x, y, modelTile) {
 	container.y = BOARD_SIZE/BOARD_DIMENSIONS*y;
 	
 	container.addEventListener("click", function(e) {
-		handleClick(modelTile);
+		if(!aiTurn || game.phase == PHASES.START) {
+			handleClick(modelTile);
+			setTimeout(function() {runAIIfNeeded()}, 1); //run ai in different thread
+		}
 	});
 	
 	stage.addChild(container);
@@ -261,11 +266,38 @@ function handleClick(tile) {
 	updateBoardGraphics();
 }
 
+function runAIIfNeeded() {
+	if(ai == PLAYERS.X && (game.phase == PHASES.X_ACTION || game.phase == PHASES.X_MOVE) ||
+			ai == PLAYERS.O && (game.phase == PHASES.O_ACTION || game.phase == PHASES.O_MOVE)) {
+		aiTurn = true;
+		var clicks = minimax(game, ai);
+		
+		console.log(clicks);
+		
+		setTimeout(function() {makeMove(clicks[0])}, 1000);
+		if(clicks.length > 1)
+			setTimeout(function() {makeMove(clicks[1]); aiTurn = false;}, 1500);
+	}
+}
+
+function makeMove(move) {
+	console.log(move);
+	if(move.fromX != undefined) {
+		handleClick(game.board[move.fromX][move.fromY]);
+		setTimeout(function() {handleClick(game.board[move.x][move.y])}, 100);
+	} else if (move.x != undefined) {
+		handleClick(game.board[move.x][move.y]);
+	} else {
+		handleClick(game.board[0][0]);
+	}
+}
+
 function resetGame(game) {
 	moves = [];
 	game.turnCount = 0;
 	game.phaseInvalid = false;
 	aiTree = {};
+	aiTurn = false;
 	
 	var board = game.board;
 	for (var i = 0; i < BOARD_DIMENSIONS; i++)
