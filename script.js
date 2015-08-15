@@ -101,7 +101,8 @@ for(var i=0; i<BOARD_DIMENSIONS; i++){
 }
 
 
-var ai = PLAYERS.O;
+var ai;
+var aiOptions;
 var aiTree;
 var aiTurn;
 
@@ -114,6 +115,28 @@ var errorText;
 var selectedTile;
 
 $(function() {
+	$("#xAI").change(function(e) {
+		if($(this).is(":checked")) {
+			aiOptions.push(PLAYERS.X);
+		} else
+			aiOptions.splice($.inArray(PLAYERS.X, ai), 1 );
+	});
+	$("#oAI").change(function(e) {
+		if($(this).is(":checked")) {
+			aiOptions.push(PLAYERS.O);
+		} else
+			aiOptions.splice($.inArray(PLAYERS.O, ai), 1 );
+	});
+	$("#apply").click(function(e) {
+		console.log("hi");
+		game.phase = PHASES.START;
+		resetGame(game);
+		ai = aiOptions;
+		startNextPhase();
+		updateBoardGraphics();
+		runAIIfNeeded();
+	});
+	
 	stage = new createjs.Stage("canvas");
 	stage.x = 5;
 	stage.y = 5;
@@ -148,6 +171,9 @@ $(function() {
 	errorText.lineWidth = 350;
 	
 	stage.addChild(turnIndicatorContainer, errorText);
+	
+	ai = [];
+	aiOptions = [];
 	
 	game.phase = PHASES.START;
 	resetGame(game);
@@ -291,7 +317,7 @@ function runAIIfNeeded() {
 		
 		setTimeout(function() {makeMove(clicks[0])}, 500);
 		if(clicks.length > 1)
-			setTimeout(function() {makeMove(clicks[1]); aiTurn = false;}, 1000);
+			setTimeout(function() {makeMove(clicks[1])}, 1000);
 	}
 }
 
@@ -386,8 +412,9 @@ function startNextPhase() {
 		}
 	}
 	
-	aiTurn = (ai == PLAYERS.X && (game.phase == PHASES.X_ACTION || game.phase == PHASES.X_MOVE) ||
-			ai == PLAYERS.O && (game.phase == PHASES.O_ACTION || game.phase == PHASES.O_MOVE));
+	var player = (game.phase == PHASES.X_ACTION || game.phase == PHASES.X_MOVE)
+			? PLAYERS.X : PLAYERS.O;
+	aiTurn = ($.inArray(player, ai) >= 0);
 }
 
 function incrementPhase(phase) {
