@@ -16,6 +16,9 @@ var PHASES = {
 var ACTIONS = {
 	PLACE: {
 		checkCondition: function(board, player) {
+			return this.checkBoardConfiguration(board, player) && this.checkHasSpace(board, player);
+		},
+		checkBoardConfiguration: function(board, player) {
 			//two adjacent tiles owned by player
 			for(var i= 0; i<BOARD_DIMENSIONS; i++) {
 				for(var j=0; j<BOARD_DIMENSIONS; j++) {
@@ -25,6 +28,18 @@ var ACTIONS = {
 							return true;
 						if(j<BOARD_DIMENSIONS-1 && board[i][j+1].getController() == player)
 							return true;
+					}
+				}
+			}
+			return false;
+		},
+		checkHasSpace: function(board, player) {
+			for(var i= 0; i<BOARD_DIMENSIONS; i++) {
+				for(var j=0; j<BOARD_DIMENSIONS; j++) {
+					var tile = board[i][j];
+					var controller = tile.getController();
+					if(tile.getPiece() == PLAYERS.N && (controller == player || controller == PLAYERS.N)) {
+						return true;
 					}
 					
 				}
