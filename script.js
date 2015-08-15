@@ -590,12 +590,12 @@ function calculateGameScore(node, game, depth, alpha, beta, player) {
 					bestMove.push(child);
 				}
 				
-				alpha = Math.max(alpha, best);
-				
-				if(beta <= alpha) {
-					//console.log("yay max");
-					return false; //break
-				}
+				if(phase==PHASES.X_MOVE && player==PLAYERS.X || phase==PHASES.O_ACTION && player==PLAYERS.O) {
+					alpha = Math.max(alpha, best);
+					if(beta <= alpha) {
+						//console.log("yay max");
+						return false; //break
+				}}
 			});
 		} else {
 			best = Infinity;
@@ -613,10 +613,12 @@ function calculateGameScore(node, game, depth, alpha, beta, player) {
 				
 				beta = Math.min(beta, best);
 				
-				if(beta <= alpha) {
-					//console.log("yay min");
-					return false; //break
-				} 
+				if(phase==PHASES.O_ACTION && player==PLAYERS.X || phase==PHASES.X_ACTION && player==PLAYERS.O) {
+					if (beta <= alpha) {
+						//console.log("yay min");
+						return false; //break
+					}
+				}
 			});
 		}
 		
