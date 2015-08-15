@@ -356,9 +356,9 @@ function startNextPhase() {
 		turnIndicator.graphics = X_GRAPHIC;
 		turnText.text = "'s move";
 		
-		if(!boardHasPiece(game.board, PLAYERS.X)) {
+		if(!boardHasMovablePiece(game.board, PLAYERS.X)) {
 			game.phaseInvalid = true;
-			setErrorText("No pieces; click board to continue.");
+			setErrorText("No movable pieces; click board to continue.");
 		}
 	} else if (game.phase == PHASES.X_ACTION) {
 		turnIndicator.graphics = X_GRAPHIC;
@@ -380,9 +380,9 @@ function startNextPhase() {
 		turnIndicator.graphics = O_GRAPHIC;
 		turnText.text = "'s move";
 		
-		if(!boardHasPiece(game.board, PLAYERS.O)) {
+		if(!boardHasMovablePiece(game.board, PLAYERS.O)) {
 			game.phaseInvalid = true;
-			setErrorText("No pieces; click board to continue.");
+			setErrorText("No movable pieces; click board to continue.");
 		}
 	}
 }
@@ -440,13 +440,21 @@ function movePiece(player, tile, selectedTile) {
 	return false;
 }
 
-function boardHasPiece(board, player) {
-	for (var i = 0; i < BOARD_DIMENSIONS; i++)
+function boardHasMovablePiece(board, player) {
+	for (var i = 0; i < BOARD_DIMENSIONS; i++) {
 		for (var j = 0; j < BOARD_DIMENSIONS; j++) {
-			if (board[i][j].getPiece() == player){
-				return true;
+			var tile = board[i][j];
+			if (tile.getPiece() == player) {
+				for (var i2 = i - 1; i2 <= i + 1; i2++) {
+					for (var j2 = j - 1; j2 <= j + 1; j2++) {
+						if (i2 >= 0 && i2 < BOARD_DIMENSIONS && j2 >= 0 && j2 < BOARD_DIMENSIONS
+								&& board[i2][j2].getPiece() == PLAYERS.N)
+							return true;
+					}
+				}
 			}
 		}
+	}
 	
 	return false;
 }
