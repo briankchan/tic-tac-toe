@@ -518,7 +518,7 @@ function minimax(game, player) {
 		})[0];
 	}
 	
-	calculateGameScore(node, game, 6, player);
+	calculateGameScore(node, game, 6, -Infinity, Infinity, player);
 	
 	console.log(node);
 	
@@ -549,7 +549,7 @@ function clicksAreEqual(a, b) {
 	return true;
 }
 
-function calculateGameScore(node, game, depth, player) {
+function calculateGameScore(node, game, depth, alpha, beta, player) {
 	var winner = checkWin(game.board);
 	if (winner != PLAYERS.N) {
 		if (winner == player)
@@ -575,29 +575,51 @@ function calculateGameScore(node, game, depth, player) {
 		
 		var best;
 		var bestMove = [];
-		var isBetter;
 		//maximize score on ai's turn, minimize on opponent's turn
 		if (((phase == PHASES.X_ACTION || phase == PHASES.X_MOVE) && player == PLAYERS.X)
 				|| ((phase == PHASES.O_ACTION || phase == PHASES.O_MOVE) && player == PLAYERS.O)) {
 			best = -Infinity;
-			isBetter = gt;
+			$.each(children, function(i, child) {
+				doMove(game, child.clicks);
+				calculateGameScore(child, game, depth - 1, alpha, beta, player);
+				undoMove(game, child.clicks, child.undo);
+				if (child.score > best) {
+					best = child.score;
+					bestMove.length = 0;
+					bestMove.push(child);
+				} else if (child.score == best) {
+					bestMove.push(child);
+				}
+				
+				alpha = Math.max(alpha, best);
+				
+				if(beta <= alpha) {
+					//console.log("yay max");
+					return false; //break
+				}
+			});
 		} else {
 			best = Infinity;
-			isBetter = lt;
+			$.each(children, function(i, child) {
+				doMove(game, child.clicks);
+				calculateGameScore(child, game, depth - 1, alpha, beta, player);
+				undoMove(game, child.clicks, child.undo);
+				if (child.score < best) {
+					best = child.score;
+					bestMove.length = 0;
+					bestMove.push(child);
+				} else if (child.score == best) {
+					bestMove.push(child);
+				}
+				
+				beta = Math.min(beta, best);
+				
+				if(beta <= alpha) {
+					//console.log("yay min");
+					return false; //break
+				} 
+			});
 		}
-		
-		$.each(children, function(i, child) {
-			doMove(game, child.clicks);
-			calculateGameScore(child, game, depth - 1, player);
-			undoMove(game, child.clicks, child.undo);
-			if (isBetter(child.score, best)) {
-				best = child.score;
-				bestMove.length = 0;
-				bestMove.push(child);
-			} else if (child.score == best) {
-				bestMove.push(child);
-			}
-		});
 		
 		node.score = best;
 		node.bestMove = bestMove;
