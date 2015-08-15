@@ -303,10 +303,9 @@ function resetGame(game) {
 	for (var i = 0; i < BOARD_DIMENSIONS; i++)
 		for (var j = 0; j < BOARD_DIMENSIONS; j++) {
 			board[i][j].setPiece(PLAYERS.N);
-			//if(i>=1 && i<=2 && j>=1 && j<=2)//hardcode starting condition for 4x4 because reasons
-			//	board[i][j].setController(PLAYERS.O);
-			//else board[i][j].setController(PLAYERS.N);
-			board[i][j].setController(PLAYERS.N);
+			if(i>=1 && i<=2 && j>=1 && j<=2)//hardcode starting condition for 4x4 because reasons
+				board[i][j].setController(PLAYERS.O);
+			else board[i][j].setController(PLAYERS.N);
 		}
 }
 
