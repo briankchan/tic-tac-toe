@@ -35,11 +35,11 @@ var ACTIONS = {
 			if((tile.getController() == player || tile.getController() == PLAYERS.N)) {
 				if (tile.getPiece() == PLAYERS.N) {
 					tile.setPiece(player);
-					moves.push({
-						action: ACTIONS.PLACE,
-						x: tile.getX(),
-						y: tile.getY()
-					});
+					//moves.push({
+					//	action: ACTIONS.PLACE,
+					//	x: tile.getX(),
+					//	y: tile.getY()
+					//});
 					setErrorText("");
 					return true;
 				} else setErrorText("Not an empty tile.");
@@ -90,7 +90,7 @@ var ai = PLAYERS.O;
 var aiTree;
 var aiTurn;
 
-var moves;
+//var moves;
 
 var turnIndicator;
 var turnText;
@@ -244,7 +244,7 @@ TileGraphics.prototype.update = function() {
 
 function handleClick(tile) {
 	if (game.phaseInvalid) {
-		moves.push({ action: null });
+		//moves.push({ action: null });
 		startNextPhase();
 	} else if(game.phase == PHASES.START) {
 		resetGame(game);
@@ -390,13 +390,13 @@ function movePiece(player, tile, selectedTile) {
 			selectedTile.setPiece(PLAYERS.N);
 			selectedTile.deselect();
 			tile.setPiece(player);
-			moves.push({
-				action: "move", //TODO: turn move into an action like place
-				x: tile.getX(),
-				y: tile.getY(),
-				fromX: selectedTile.getX(),
-				fromY: selectedTile.getY()
-			});
+			//moves.push({
+			//	action: "move", //TODO: turn move into an action like place
+			//	x: tile.getX(),
+			//	y: tile.getY(),
+			//	fromX: selectedTile.getX(),
+			//	fromY: selectedTile.getY()
+			//});
 			setErrorText("");
 			return true;
 		} else {
