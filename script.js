@@ -212,7 +212,7 @@ function TileGraphics(x, y, modelTile) {
 	container.addEventListener("click", function(e) {
 		if(!aiTurn || game.phase == PHASES.START) {
 			handleClick(modelTile);
-			setTimeout(function() {runAIIfNeeded()}, 1); //run ai in different thread
+			setTimeout(function() {runAIIfNeeded()}, 50); //run ai in different thread
 		}
 	});
 	
