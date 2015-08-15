@@ -274,9 +274,9 @@ function runAIIfNeeded() {
 		
 		console.log(clicks);
 		
-		setTimeout(function() {makeMove(clicks[0])}, 1000);
+		setTimeout(function() {makeMove(clicks[0])}, 500);
 		if(clicks.length > 1)
-			setTimeout(function() {makeMove(clicks[1]); aiTurn = false;}, 1500);
+			setTimeout(function() {makeMove(clicks[1]); aiTurn = false;}, 1000);
 	}
 }
 
