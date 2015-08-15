@@ -372,6 +372,14 @@ function incrementPhase(phase) {
 	else return phase;
 }
 
+function prevPhase(phase) {
+	phase--;
+	if(phase < PHASES.FIRST){
+		return PHASES.LAST
+	}
+	else return phase;
+}
+
 function setErrorText(text) {
 	errorText.text = text;
 }
@@ -497,7 +505,7 @@ function checkWinDiag2(board) {
 function minimax(game, player) {
 	var node;
 	if (!aiTree.moves)
-		node = {game: game};
+		node = {};
 	else {
 		var moveOne = moves[moves.length-2]; //hardcoded for current phases
 		var moveTwo = moves[moves.length-1];
@@ -510,7 +518,7 @@ function minimax(game, player) {
 		})[0];
 	}
 	
-	calculateGameScore(node, 4, player);
+	calculateGameScore(node, game, 6, player);
 	
 	console.log(node);
 	
@@ -541,9 +549,8 @@ function clicksAreEqual(a, b) {
 	return true;
 }
 
-function calculateGameScore(node, depth, player) {
-	
-	var winner = checkWin(node.game.board);
+function calculateGameScore(node, game, depth, player) {
+	var winner = checkWin(game.board);
 	if (winner != PLAYERS.N) {
 		if (winner == player)
 			node.score = 1000000000 + depth;
@@ -551,7 +558,7 @@ function calculateGameScore(node, depth, player) {
 	} else if (false) { //TODO: check for draws
 		node.score = 0;
 	} else if (depth == 0) {
-		node.score = calculateGameInProgressScore(node.game.board, player);
+		node.score = calculateGameInProgressScore(game.board, player);
 		node.moves = [];
 		node.bestMove = null;
 	} else {
@@ -560,11 +567,11 @@ function calculateGameScore(node, depth, player) {
 		if(node.moves && node.moves.length > 0)
 			children = node.moves;
 		else {
-			children = findMoves(node.game);
+			children = findMoves(game);
 			node.moves = children;
 		}
 		
-		var phase = node.game.phase;
+		var phase = game.phase;
 		
 		var best;
 		var bestMove = [];
@@ -580,7 +587,9 @@ function calculateGameScore(node, depth, player) {
 		}
 		
 		$.each(children, function(i, child) {
-			calculateGameScore(child, depth - 1, player);
+			doMove(game, child.clicks);
+			calculateGameScore(child, game, depth - 1, player);
+			undoMove(game, child.clicks, child.undo);
 			if (isBetter(child.score, best)) {
 				best = child.score;
 				bestMove.length = 0;
@@ -724,7 +733,7 @@ function findMoveMoves(game, player) {
 				for (var iOffset = -1; iOffset<=1; iOffset++) {
 					for (var jOffset = -1; jOffset<=1; jOffset++) {
 						if(iOffset != 0 || jOffset != moves) { //all neighboring tiles, but not this tile
-							var move = makeMoveIfValid(game,i,j,i+iOffset,j+jOffset,player);
+							var move = makeMoveIfValid(game,i,j,i+iOffset,j+jOffset);
 							if (move) moves.push(move);
 						}
 					}
@@ -734,26 +743,20 @@ function findMoveMoves(game, player) {
 	}
 	
 	if(moves.length == 0) {
-		var copy = copyGame(game);
-		copy.phase = incrementPhase(copy.phase);
 		moves.push({
-			clicks: {},
-			game: copy
+			clicks: {}
 		});
 	}
 	
 	return moves;
 }
 
-function makeMoveIfValid(game, x, y, xNew, yNew, player) {
+function makeMoveIfValid(game, x, y, xNew, yNew) {
 	if(xNew>=0 && xNew<BOARD_DIMENSIONS && yNew>=0 && yNew<BOARD_DIMENSIONS) {
 		if(game.board[xNew][yNew].getPiece() == PLAYERS.N) {
-			var copy = copyGame(game);
-			copy.phase = incrementPhase(copy.phase);
-			movePiece(player, copy.board[xNew][yNew], copy.board[x][y]);
 			return {
 				clicks: {x:xNew, y:yNew, fromX:x, fromY:y},
-				game: copy
+				undo: {controller:game.board[xNew][yNew].getController()}
 			};
 		}
 	}
@@ -769,12 +772,9 @@ function findActionMoves(game, action, player) {
 				var tile = board[i][j];
 				var controller = tile.getController();
 				if (tile.getPiece() == PLAYERS.N && (controller == player || controller == PLAYERS.N)) {
-					var copy = copyGame(game);
-					copy.phase = incrementPhase(copy.phase);
-					doAction(copy.board, action, player, copy.board[i][j]);
 					moves.push({
 						clicks: { x: i, y: j },
-						game: copy
+						undo: {controller:controller}
 					});
 				}
 			}
@@ -782,13 +782,37 @@ function findActionMoves(game, action, player) {
 	}
 	
 	if(moves.length == 0) {
-		var copy = copyGame(game);
-		copy.phase = incrementPhase(copy.phase);
 		moves.push({
-			clicks: {},
-			game: copy
+			clicks: {}
 		});
 	}
 	
 	return moves;
+}
+
+function doMove(game, move) {
+	var player = (game.phase == PHASES.X_ACTION || game.phase == PHASES.X_MOVE)
+			? PLAYERS.X : PLAYERS.O;
+	
+	if (move.fromX!=undefined) {
+		movePiece(player, game.board[move.x][move.y], game.board[move.fromX][move.fromY]);
+	}else if (move.x!=undefined) {
+		doAction(game.board, ACTIONS.PLACE, player, game.board[move.x][move.y]);
+	}
+	game.phase = incrementPhase(game.phase);
+}
+
+function undoMove(game, move, extraMoveData) {
+	game.phase = prevPhase(game.phase);
+	var board = game.board;
+	if(move.fromX != undefined) {
+		var player = (game.phase == PHASES.X_ACTION || game.phase == PHASES.X_MOVE) ? PLAYERS.X : PLAYERS.O;
+		
+		movePiece(player, board[move.fromX][move.fromY], board[move.x][move.y]);
+		board[move.x][move.y].setController(extraMoveData.controller);
+	} else if (move.x != undefined) {
+		board[move.x][move.y].setPiece(PLAYERS.N);
+		board[move.x][move.y].setController(extraMoveData.controller);
+	}
+	
 }
