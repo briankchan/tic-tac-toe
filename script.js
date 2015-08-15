@@ -517,7 +517,7 @@ function minimax(game, player) {
 		})[0];
 	}
 	
-	calculateGameScore(node, game, 6, -Infinity, Infinity, player);
+	calculateGameScore(node, game, 8, -Infinity, Infinity, player);
 	
 	console.log(node);
 	
@@ -651,10 +651,10 @@ function copyBoard(board) {
 function calculateGameInProgressScore(board, player) {
 	var score = 0;
 	
-	if(ACTIONS.PLACE.checkCondition(board, PLAYERS.X))
-		score += (player == PLAYERS.X) ? 10000 : -10000;
-	if(ACTIONS.PLACE.checkCondition(board, PLAYERS.O))
-		score += (player == PLAYERS.O) ? 10000 : -10000;
+	//if(ACTIONS.PLACE.checkCondition(board, PLAYERS.X))
+	//	score += (player == PLAYERS.X) ? 100000 : -100000;
+	//if(ACTIONS.PLACE.checkCondition(board, PLAYERS.O))
+	//	score += (player == PLAYERS.O) ? 100000 : -100000;
 	
 	for(var i=0; i<BOARD_DIMENSIONS; i++)
 		for(var j=0; j<BOARD_DIMENSIONS; j++) {
