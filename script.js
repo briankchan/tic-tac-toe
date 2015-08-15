@@ -105,6 +105,7 @@ var ai;
 var aiOptions;
 var aiTree;
 var aiTurn;
+var aiRunning;
 
 //var moves;
 
@@ -134,7 +135,6 @@ $(function() {
 		ai = aiOptions;
 		startNextPhase();
 		updateBoardGraphics();
-		runAIIfNeeded();
 	});
 	
 	stage = new createjs.Stage("canvas");
@@ -180,8 +180,6 @@ $(function() {
 	startNextPhase();
 	
 	updateBoardGraphics();
-	
-	runAIIfNeeded();
 });
 
 function updateBoardGraphics() {
@@ -255,7 +253,6 @@ function TileGraphics(x, y, modelTile) {
 	container.addEventListener("click", function(e) {
 		if(!aiTurn || game.phase == PHASES.START) {
 			handleClick(modelTile);
-			setTimeout(function() {runAIIfNeeded()}, 50); //run ai in different thread
 		}
 	});
 	
@@ -309,20 +306,19 @@ function handleClick(tile) {
 	updateBoardGraphics();
 }
 
-function runAIIfNeeded() {
-	if(aiTurn) {
-		var clicks = minimax(game, ai);
-		
-		console.log(clicks);
-		
-		setTimeout(function() {makeMove(clicks[0])}, 500);
-		if(clicks.length > 1)
-			setTimeout(function() {makeMove(clicks[1])}, 1000);
-	}
+function runAI() {
+	aiRunning = true;
+	
+	var player = (game.phase == PHASES.X_ACTION || game.phase == PHASES.X_MOVE)
+			? PLAYERS.X : PLAYERS.O;
+	var clicks = minimax(game, player);
+	
+	setTimeout(function() { makeMove(clicks[0]) }, 500);
+	if(clicks.length > 1)
+		setTimeout(function() { aiRunning = false; makeMove(clicks[1]); }, 1000);
 }
 
 function makeMove(move) {
-	console.log(move);
 	if(move.fromX != undefined) {
 		handleClick(game.board[move.fromX][move.fromY]);
 		setTimeout(function() {handleClick(game.board[move.x][move.y])}, 100);
@@ -334,11 +330,12 @@ function makeMove(move) {
 }
 
 function resetGame(game) {
-	moves = [];
+	//moves = [];
 	game.turnCount = 0;
 	game.phaseInvalid = false;
 	aiTree = {};
 	aiTurn = false;
+	aiRunning = false;
 	
 	var board = game.board;
 	for (var i = 0; i < BOARD_DIMENSIONS; i++)
@@ -415,6 +412,10 @@ function startNextPhase() {
 	var player = (game.phase == PHASES.X_ACTION || game.phase == PHASES.X_MOVE)
 			? PLAYERS.X : PLAYERS.O;
 	aiTurn = ($.inArray(player, ai) >= 0);
+	
+	if(aiTurn && !aiRunning) {
+		setTimeout(runAI, 50); //run ai in different thread
+	}
 }
 
 function incrementPhase(phase) {
@@ -591,7 +592,6 @@ function minimax(game, player) {
 	
 	calculateGameScore(node, game, 6, -Infinity, Infinity, player);
 	
-	console.log(node);
 	
 	var firstMove = getRandomElement(node.bestMove);
 	var secondMove = getRandomElement(firstMove.bestMove);
