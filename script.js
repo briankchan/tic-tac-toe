@@ -313,6 +313,15 @@ function startNextPhase() {
 	game.phaseInvalid = false;
 	setErrorText("");
 	
+	if(checkDraw(game.board)) {
+		game.phase = PHASES.START;
+		
+		turnIndicator.graphics = EMPTY_GRAPHIC;
+		turnText.text = "Draw.";
+		setErrorText("Click to start a new game.");
+		return;
+	}
+	
 	var winner = checkWin(game.board);
 	if(winner != PLAYERS.N) {
 		game.phase = PHASES.START;
@@ -432,6 +441,16 @@ function playerCanUseAction(board, action, player) {
 }
 function doAction(board, action, player, tile) {
 	return action.doAction(board, player, tile);
+}
+
+function checkDraw(board) {
+	for (var i=0; i<BOARD_DIMENSIONS; i++) {
+		for (var j=0; j<BOARD_DIMENSIONS; j++) {
+			if(board[i][j].getPiece()==PLAYERS.N)
+				return false;
+		}
+	}
+	return true;
 }
 
 function checkWin(board) {
@@ -554,7 +573,7 @@ function calculateGameScore(node, game, depth, alpha, beta, player) {
 		if (winner == player)
 			node.score = 1000000000 + depth;
 		else node.score = -1000000000 - depth;
-	} else if (false) { //TODO: check for draws
+	} else if (checkDraw(game.board)) {
 		node.score = 0;
 	} else if (depth == 0) {
 		node.score = calculateGameInProgressScore(game.board, player);
