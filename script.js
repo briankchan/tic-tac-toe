@@ -154,6 +154,8 @@ $(function() {
 	startNextPhase();
 	
 	updateBoardGraphics();
+	
+	runAIIfNeeded();
 });
 
 function updateBoardGraphics() {
@@ -282,9 +284,7 @@ function handleClick(tile) {
 }
 
 function runAIIfNeeded() {
-	if(ai == PLAYERS.X && (game.phase == PHASES.X_ACTION || game.phase == PHASES.X_MOVE) ||
-			ai == PLAYERS.O && (game.phase == PHASES.O_ACTION || game.phase == PHASES.O_MOVE)) {
-		aiTurn = true;
+	if(aiTurn) {
 		var clicks = minimax(game, ai);
 		
 		console.log(clicks);
@@ -385,6 +385,9 @@ function startNextPhase() {
 			setErrorText("No movable pieces; click board to continue.");
 		}
 	}
+	
+	aiTurn = (ai == PLAYERS.X && (game.phase == PHASES.X_ACTION || game.phase == PHASES.X_MOVE) ||
+			ai == PLAYERS.O && (game.phase == PHASES.O_ACTION || game.phase == PHASES.O_MOVE));
 }
 
 function incrementPhase(phase) {
