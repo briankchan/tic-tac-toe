@@ -517,7 +517,7 @@ function minimax(game, player) {
 		})[0];
 	}
 	
-	calculateGameScore(node, game, 8, -Infinity, Infinity, player);
+	calculateGameScore(node, game, 6, -Infinity, Infinity, player);
 	
 	console.log(node);
 	
